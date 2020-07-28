@@ -4,6 +4,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import java.util.Set;
 import java.util.Stack;
+import java.util.Objects;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanExpressionContext;
@@ -65,7 +66,7 @@ public class PlaceholderHelper {
   public Set<String> extractPlaceholderKeys(String propertyString) {
     Set<String> placeholderKeys = Sets.newHashSet();
 
-    if (!isNormalizedPlaceholder(propertyString) && !isExpressionWithPlaceholder(propertyString)) {
+    if (Strings.isNullOrEmpty(propertyString) || (!isNormalizedPlaceholder(propertyString) && !isExpressionWithPlaceholder(propertyString))) {
       return placeholderKeys;
     }
 
@@ -119,12 +120,12 @@ public class PlaceholderHelper {
   }
 
   private boolean isNormalizedPlaceholder(String propertyString) {
-    return propertyString.startsWith(PLACEHOLDER_PREFIX) && propertyString.endsWith(PLACEHOLDER_SUFFIX);
+    return propertyString.startsWith(PLACEHOLDER_PREFIX) && propertyString.contains(PLACEHOLDER_SUFFIX);
   }
 
   private boolean isExpressionWithPlaceholder(String propertyString) {
-    return propertyString.startsWith(EXPRESSION_PREFIX) && propertyString.endsWith(EXPRESSION_SUFFIX)
-        && propertyString.contains(PLACEHOLDER_PREFIX);
+    return propertyString.startsWith(EXPRESSION_PREFIX) && propertyString.contains(EXPRESSION_SUFFIX)
+        && propertyString.contains(PLACEHOLDER_PREFIX) && propertyString.contains(PLACEHOLDER_SUFFIX);
   }
 
   private String normalizeToPlaceholder(String strVal) {
