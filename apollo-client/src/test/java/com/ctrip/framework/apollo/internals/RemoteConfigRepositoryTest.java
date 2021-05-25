@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Apollo Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.ctrip.framework.apollo.internals;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -28,10 +44,11 @@ import com.ctrip.framework.apollo.util.OrderedProperties;
 import com.ctrip.framework.apollo.util.factory.PropertiesFactory;
 import com.ctrip.framework.apollo.util.http.HttpRequest;
 import com.ctrip.framework.apollo.util.http.HttpResponse;
-import com.ctrip.framework.apollo.util.http.HttpUtil;
+import com.ctrip.framework.apollo.util.http.HttpClient;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.net.HttpHeaders;
 import com.google.common.net.UrlEscapers;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.gson.Gson;
@@ -62,7 +79,7 @@ public class RemoteConfigRepositoryTest {
   private String someNamespace;
   private String someServerUrl;
   private ConfigUtil configUtil;
-  private HttpUtil httpUtil;
+  private HttpClient httpClient;
   @Mock
   private static HttpResponse<ApolloConfig> someResponse;
   @Mock
@@ -92,8 +109,8 @@ public class RemoteConfigRepositoryTest {
     when(configServiceLocator.getConfigServices()).thenReturn(Lists.newArrayList(serviceDTO));
     MockInjector.setInstance(ConfigServiceLocator.class, configServiceLocator);
 
-    httpUtil = spy(new MockHttpUtil());
-    MockInjector.setInstance(HttpUtil.class, httpUtil);
+    httpClient = spy(new MockHttpClient());
+    MockInjector.setInstance(HttpClient.class, httpClient);
 
     remoteConfigLongPollService = new RemoteConfigLongPollService();
 
@@ -186,11 +203,11 @@ public class RemoteConfigRepositoryTest {
         Map<String, String> headers = request.getHeaders();
         assertNotNull(headers);
         assertTrue(headers.containsKey(Signature.HTTP_HEADER_TIMESTAMP));
-        assertTrue(headers.containsKey(Signature.HTTP_HEADER_AUTHORIZATION));
+        assertTrue(headers.containsKey(HttpHeaders.AUTHORIZATION));
 
         return someResponse;
       }
-    }).when(httpUtil).doGet(any(HttpRequest.class), any(Class.class));
+    }).when(httpClient).doGet(any(HttpRequest.class), any(Class.class));
 
     RemoteConfigRepository remoteConfigRepository = new RemoteConfigRepository(someNamespace);
 
@@ -294,7 +311,7 @@ public class RemoteConfigRepositoryTest {
     when(pollResponse.getBody()).thenReturn(Lists.newArrayList(someNotification));
     when(someResponse.getBody()).thenReturn(newApolloConfig);
 
-    longPollFinished.get(5000, TimeUnit.MILLISECONDS);
+    longPollFinished.get(30_000, TimeUnit.MILLISECONDS);
 
     remoteConfigLongPollService.stopLongPollingRefresh();
 
@@ -303,7 +320,7 @@ public class RemoteConfigRepositoryTest {
 
     final ArgumentCaptor<HttpRequest> httpRequestArgumentCaptor = ArgumentCaptor
         .forClass(HttpRequest.class);
-    verify(httpUtil, atLeast(2)).doGet(httpRequestArgumentCaptor.capture(), eq(ApolloConfig.class));
+    verify(httpClient, atLeast(2)).doGet(httpRequestArgumentCaptor.capture(), eq(ApolloConfig.class));
 
     HttpRequest request = httpRequestArgumentCaptor.getValue();
 
@@ -406,7 +423,7 @@ public class RemoteConfigRepositoryTest {
     }
   }
 
-  public static class MockHttpUtil extends HttpUtil {
+  public static class MockHttpClient implements HttpClient {
 
     @Override
     public <T> HttpResponse<T> doGet(HttpRequest httpRequest, Class<T> responseType) {

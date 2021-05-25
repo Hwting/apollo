@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Apollo Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.ctrip.framework.apollo.mockserver;
 
 import com.ctrip.framework.apollo.build.ApolloInjector;
@@ -36,7 +52,7 @@ public class EmbeddedApollo extends ExternalResource {
   private static Method CONFIG_SERVICE_LOCATOR_CLEAR;
   private static ConfigServiceLocator CONFIG_SERVICE_LOCATOR;
 
-  private final Gson gson = new Gson();
+  private static final Gson GSON = new Gson();
   private final Map<String, Map<String, String>> addedOrModifiedPropertiesOfNamespace = Maps.newConcurrentMap();
   private final Map<String, Set<String>> deletedKeysOfNamespace = Maps.newConcurrentMap();
 
@@ -115,17 +131,17 @@ public class EmbeddedApollo extends ExternalResource {
 
     Map<String, String> mergedConfigurations = mergeOverriddenProperties(namespace, configurations);
     apolloConfig.setConfigurations(mergedConfigurations);
-    return gson.toJson(apolloConfig);
+    return GSON.toJson(apolloConfig);
   }
 
   private String mockLongPollBody(String notificationsStr) {
-    List<ApolloConfigNotification> oldNotifications = gson.fromJson(notificationsStr, notificationType);
+    List<ApolloConfigNotification> oldNotifications = GSON.fromJson(notificationsStr, notificationType);
     List<ApolloConfigNotification> newNotifications = new ArrayList<>();
     for (ApolloConfigNotification notification : oldNotifications) {
       newNotifications
           .add(new ApolloConfigNotification(notification.getNamespaceName(), notification.getNotificationId() + 1));
     }
-    return gson.toJson(newNotifications);
+    return GSON.toJson(newNotifications);
   }
 
   /**

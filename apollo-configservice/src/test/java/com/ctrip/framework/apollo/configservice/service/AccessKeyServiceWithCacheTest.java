@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Apollo Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.ctrip.framework.apollo.configservice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,6 +97,11 @@ public class AccessKeyServiceWithCacheTest {
 
     await().untilAsserted(() -> assertThat(accessKeyServiceWithCache.getAvailableSecrets(appId))
         .containsExactly("secret-1", "secret-2"));
+    // should also work with appid in different case
+    assertThat(accessKeyServiceWithCache.getAvailableSecrets(appId.toUpperCase()))
+        .containsExactly("secret-1", "secret-2");
+    assertThat(accessKeyServiceWithCache.getAvailableSecrets(appId.toLowerCase()))
+        .containsExactly("secret-1", "secret-2");
 
     // Update access key, disable the first one
     firstAccessKey = assembleAccessKey(1L, appId, "secret-1", false, false, 1577808004000L);

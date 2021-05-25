@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Apollo Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 package com.ctrip.framework.apollo.portal.service;
 
 import com.ctrip.framework.apollo.common.constants.GsonType;
@@ -24,9 +40,8 @@ import java.util.Set;
 @Service
 public class ReleaseHistoryService {
 
-  private Gson gson = new Gson();
-
-
+  private final static Gson GSON = new Gson();
+  
   private final AdminServiceAPI.ReleaseHistoryAPI releaseHistoryAPI;
   private final ReleaseService releaseService;
 
@@ -120,7 +135,7 @@ public class ReleaseHistoryService {
       bo.setReleaseComment(release.getComment());
       bo.setReleaseAbandoned(release.isAbandoned());
 
-      Map<String, String> configuration = gson.fromJson(release.getConfigurations(), GsonType.CONFIG);
+      Map<String, String> configuration = GSON.fromJson(release.getConfigurations(), GsonType.CONFIG);
       List<EntityPair<String>> items = new ArrayList<>(configuration.size());
       for (Map.Entry<String, String> entry : configuration.entrySet()) {
         EntityPair<String> entityPair = new EntityPair<>(entry.getKey(), entry.getValue());
