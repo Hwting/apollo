@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,85 +16,93 @@
  */
 package com.ctrip.framework.apollo.portal.spi.springsecurity;
 
-import com.google.common.collect.Lists;
-
 import com.ctrip.framework.apollo.core.utils.StringUtils;
 import com.ctrip.framework.apollo.portal.entity.bo.UserInfo;
+import com.ctrip.framework.apollo.portal.entity.po.Authority;
 import com.ctrip.framework.apollo.portal.entity.po.UserPO;
+import com.ctrip.framework.apollo.portal.repository.AuthorityRepository;
 import com.ctrip.framework.apollo.portal.repository.UserRepository;
 import com.ctrip.framework.apollo.portal.spi.UserService;
 
-import java.util.Collections;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
 
 /**
  * @author lepdou 2017-03-10
  */
 public class SpringSecurityUserService implements UserService {
 
-  private PasswordEncoder encoder = new BCryptPasswordEncoder();
-  private List<GrantedAuthority> authorities;
+  private final PasswordEncoder passwordEncoder;
 
-  @Autowired
-  private JdbcUserDetailsManager userDetailsManager;
-  @Autowired
-  private UserRepository userRepository;
+  private final UserRepository userRepository;
 
-  @PostConstruct
-  public void init() {
-    authorities = new ArrayList<>();
-    authorities.add(new SimpleGrantedAuthority("ROLE_user"));
+  private final AuthorityRepository authorityRepository;
+
+  public SpringSecurityUserService(
+      PasswordEncoder passwordEncoder,
+      UserRepository userRepository,
+      AuthorityRepository authorityRepository) {
+    this.passwordEncoder = passwordEncoder;
+    this.userRepository = userRepository;
+    this.authorityRepository = authorityRepository;
   }
 
   @Transactional
   public void createOrUpdate(UserPO user) {
     String username = user.getUsername();
-
-    User userDetails = new User(username, encoder.encode(user.getPassword()), authorities);
-
-    if (userDetailsManager.userExists(username)) {
-      userDetailsManager.updateUser(userDetails);
-    } else {
-      userDetailsManager.createUser(userDetails);
-    }
+    String newPassword = passwordEncoder.encode(user.getPassword());
 
     UserPO managedUser = userRepository.findByUsername(username);
-    managedUser.setEmail(user.getEmail());
+    if (managedUser == null) {
+      user.setPassword(newPassword);
+      user.setEnabled(1);
+      userRepository.save(user);
 
-    userRepository.save(managedUser);
+      //save authorities
+      Authority authority = new Authority();
+      authority.setUsername(username);
+      authority.setAuthority("ROLE_user");
+      authorityRepository.save(authority);
+    } else {
+      managedUser.setPassword(newPassword);
+      managedUser.setEmail(user.getEmail());
+      managedUser.setUserDisplayName(user.getUserDisplayName());
+      userRepository.save(managedUser);
+    }
   }
 
   @Override
   public List<UserInfo> searchUsers(String keyword, int offset, int limit) {
-    List<UserPO> users;
-    if (StringUtils.isEmpty(keyword)) {
-      users = userRepository.findFirst20ByEnabled(1);
-    } else {
-      users = userRepository.findByUsernameLikeAndEnabled("%" + keyword + "%", 1);
-    }
-
-    List<UserInfo> result = Lists.newArrayList();
+    List<UserPO> users = this.findUsers(keyword);
     if (CollectionUtils.isEmpty(users)) {
-      return result;
+      return Collections.emptyList();
     }
+    return users.stream().map(UserPO::toUserInfo)
+        .collect(Collectors.toList());
+  }
 
-    result.addAll(users.stream().map(UserPO::toUserInfo).collect(Collectors.toList()));
-
-    return result;
+  private List<UserPO> findUsers(String keyword) {
+    if (StringUtils.isEmpty(keyword)) {
+      return userRepository.findFirst20ByEnabled(1);
+    }
+    List<UserPO> users = new ArrayList<>();
+    List<UserPO> byUsername = userRepository
+        .findByUsernameLikeAndEnabled("%" + keyword + "%", 1);
+    List<UserPO> byUserDisplayName = userRepository
+        .findByUserDisplayNameLikeAndEnabled("%" + keyword + "%", 1);
+    if (!CollectionUtils.isEmpty(byUsername)) {
+      users.addAll(byUsername);
+    }
+    if (!CollectionUtils.isEmpty(byUserDisplayName)) {
+      users.addAll(byUserDisplayName);
+    }
+    return users;
   }
 
   @Override
@@ -111,12 +119,6 @@ public class SpringSecurityUserService implements UserService {
       return Collections.emptyList();
     }
 
-    List<UserInfo> result = Lists.newArrayList();
-
-    result.addAll(users.stream().map(UserPO::toUserInfo).collect(Collectors.toList()));
-
-    return result;
+    return users.stream().map(UserPO::toUserInfo).collect(Collectors.toList());
   }
-
-
 }

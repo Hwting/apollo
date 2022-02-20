@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
  */
 package com.ctrip.framework.apollo.core.utils;
 
-import com.ctrip.framework.apollo.core.utils.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -66,19 +65,6 @@ public class StringUtilsTest {
     Assert.assertFalse(StringUtils.isNumeric(null));
     Assert.assertFalse(StringUtils.isNumeric("\'"));
     Assert.assertTrue(StringUtils.isNumeric("1"));
-  }
-
-  @Test
-  public void testJoin() {
-    Assert.assertEquals("", StringUtils.join(new ArrayList(), "1a 2b 3c"));
-
-    ArrayList collection = new ArrayList();
-    collection.add(null);
-    Assert.assertEquals("", StringUtils.join(collection, "1a 2b 3c"));
-
-    collection = new ArrayList();
-    collection.add(-2_147_483_648);
-    Assert.assertEquals("-2147483648", StringUtils.join(collection, "1a 2b 3c"));
   }
 
   @Test

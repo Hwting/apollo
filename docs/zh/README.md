@@ -1,8 +1,8 @@
-<img src="https://raw.githubusercontent.com/ctripcorp/apollo/master/doc/images/logo/logo-simple.png" alt="apollo-logo" width="40%">
+<img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo@master/doc/images/logo/logo-simple.png" alt="apollo-logo" width="40%">
 
 # Introduction
 
-Apollo（阿波罗）是携程框架部门研发的分布式配置中心，能够集中化管理应用不同环境、不同集群的配置，配置修改后能够实时推送到应用端，并且具备规范的权限、流程治理等特性，适用于微服务配置管理场景。
+Apollo（阿波罗）是一款可靠的分布式配置管理中心，诞生于携程框架研发部，能够集中化管理应用不同环境、不同集群的配置，配置修改后能够实时推送到应用端，并且具备规范的权限、流程治理等特性，适用于微服务配置管理场景。
 
 服务端基于Spring Boot和Spring Cloud开发，打包后可以直接运行，不需要额外安装Tomcat等应用容器。
 
@@ -15,13 +15,14 @@ Java客户端不依赖任何框架，能够运行于所有Java运行时环境，
 本地快速部署请参见[Quick Start](zh/deployment/quick-start)
 
 演示环境（Demo）:
+
 - [http://106.54.227.205](http://106.54.227.205/)
 - 账号/密码:apollo/admin
 
-> 如访问github速度缓慢，可以访问[gitee镜像](https://gitee.com/nobodyiam/apollo)，不定期同步
+> 如访问GitHub速度缓慢，可以访问[Gitee镜像](https://gitee.com/apolloconfig/apollo)，不定期同步
 
 # Screenshots
-![配置界面](https://raw.githubusercontent.com/ctripcorp/apollo/master/doc/images/apollo-home-screenshot.jpg)
+![配置界面](https://cdn.jsdelivr.net/gh/apolloconfig/apollo@master/doc/images/apollo-home-screenshot.jpg)
 
 # Features
 * **统一管理不同环境、不同集群的配置**
@@ -83,11 +84,12 @@ Java客户端不依赖任何框架，能够运行于所有Java运行时环境，
 # Development
   - [Apollo开发指南](zh/development/apollo-development-guide.md)
   - Code Styles
-    - [Eclipse Code Style](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/eclipse-java-google-style.xml)
-    - [Intellij Code Style](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/intellij-java-google-style.xml)
+    - [Eclipse Code Style](https://github.com/apolloconfig/apollo/blob/master/apollo-buildtools/style/eclipse-java-google-style.xml)
+    - [Intellij Code Style](https://github.com/apolloconfig/apollo/blob/master/apollo-buildtools/style/intellij-java-google-style.xml)
   - [Portal实现用户登录功能](zh/development/portal-how-to-implement-user-login-function.md)
   - [Portal接入邮件服务](zh/development/portal-how-to-enable-email-service.md)
   - [Portal启用webhook通知](zh/development/portal-how-to-enable-webhook-notification.md)
+  - [Apollo 版本发布操作手册](zh/development/apollo-release-guide.md)
 
 # Deployment
   - [Quick Start](zh/deployment/quick-start.md)
@@ -95,17 +97,17 @@ Java客户端不依赖任何框架，能够运行于所有Java运行时环境，
   - [分布式部署指南](zh/deployment/distributed-deployment-guide.md)
 
 # Release Notes
-  * [版本发布历史](https://github.com/ctripcorp/apollo/releases)
+  * [版本发布历史](https://github.com/apolloconfig/apollo/releases)
 
 # FAQ
   * [常见问题回答](zh/faq/faq.md)
   * [部署&开发遇到的常见问题](zh/faq/common-issues-in-deployment-and-development-phase.md)
 
 # Presentation
-  * [携程开源配置中心Apollo的设计与实现](http://www.itdks.com/dakalive/detail/3420)
-    * [Slides](https://myslide.cn/slides/10168)
+  * [开源配置中心Apollo的设计与实现](http://www.itdks.com/dakalive/detail/3420)
+    * [Slides](https://github.com/apolloconfig/apollo-community/blob/master/slides/design-and-implementation-of-apollo.pdf)
   * [配置中心，让微服务更『智能』](https://2018.qconshanghai.com/presentation/799)
-    * [Slides](https://myslide.cn/slides/10035)
+    * [Slides](https://github.com/apolloconfig/apollo-community/blob/master/slides/configuration-center-makes-microservices-smart.pdf)
 
 # Publication
   * [开源配置中心Apollo的设计与实现](https://www.infoq.cn/article/open-source-configuration-center-apollo)
@@ -122,22 +124,19 @@ Java客户端不依赖任何框架，能够运行于所有Java运行时环境，
   </thead>
   <tbody>
     <tr>
-      <td><img src="https://raw.githubusercontent.com/ctripcorp/apollo-community/master/images/tech-support/tech-support-qq-2.png" alt="tech-support-qq-2"></td>
-      <td><img src="https://raw.githubusercontent.com/ctripcorp/apollo-community/master/images/tech-support/tech-support-qq-5.png" alt="tech-support-qq-5"></td>
-      <td><img src="https://raw.githubusercontent.com/ctripcorp/apollo-community/master/images/tech-support/tech-support-qq-4.png" alt="tech-support-qq-4"></td>
-      <td><img src="https://raw.githubusercontent.com/ctripcorp/apollo-community/master/images/tech-support/tech-support-qq-3.png" alt="tech-support-qq-3"></td>
-      <td><img src="https://raw.githubusercontent.com/ctripcorp/apollo-community/master/images/tech-support/tech-support-qq-1.png" alt="tech-support-qq-1"></td>
+      <td><img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo-community@master/images/tech-support/tech-support-qq-2.png" alt="tech-support-qq-2"></td>
+      <td><img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo-community@master/images/tech-support/tech-support-qq-5.png" alt="tech-support-qq-5"></td>
+      <td><img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo-community@master/images/tech-support/tech-support-qq-4.png" alt="tech-support-qq-4"></td>
+      <td><img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo-community@master/images/tech-support/tech-support-qq-3.png" alt="tech-support-qq-3"></td>
+      <td><img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo-community@master/images/tech-support/tech-support-qq-1.png" alt="tech-support-qq-1"></td>
     </tr>
   </tbody>
 </table>
 
-# Contribution
-
-Please make sure to read the [Contributing Guide](https://github.com/ctripcorp/apollo/blob/master/CONTRIBUTING.md) before making a pull request.
-
-Thanks for all the people who contributed to Apollo!
-
-<a href="https://github.com/ctripcorp/apollo/graphs/contributors"><img src="https://opencollective.com/apollo/contributors.svg?width=880&button=false" /></a>
+# 社区
+  * [团队](zh/community/team)
+  * [社区治理](https://github.com/apolloconfig/apollo/blob/master/GOVERNANCE.md)
+  * [贡献指南](https://github.com/apolloconfig/apollo/blob/master/CONTRIBUTING.md)
 
 # License
-The project is licensed under the [Apache 2 license](https://github.com/ctripcorp/apollo/blob/master/LICENSE).
+The project is licensed under the [Apache 2 license](https://github.com/apolloconfig/apollo/blob/master/LICENSE).

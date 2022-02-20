@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,19 @@ package com.ctrip.framework.apollo.util;
 
 import static com.ctrip.framework.apollo.util.factory.PropertiesFactory.APOLLO_PROPERTY_ORDER_ENABLE;
 
-import com.google.common.util.concurrent.RateLimiter;
-import java.io.File;
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.ctrip.framework.apollo.core.ApolloClientSystemConsts;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.core.MetaDomainConsts;
 import com.ctrip.framework.apollo.core.enums.Env;
 import com.ctrip.framework.apollo.core.enums.EnvUtils;
+import com.ctrip.framework.apollo.core.utils.DeprecatedPropertyNotifyUtil;
 import com.ctrip.framework.foundation.Foundation;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.RateLimiter;
+import java.io.File;
+import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
@@ -56,6 +56,8 @@ public class ConfigUtil {
   private boolean autoUpdateInjectedSpringProperties = true;
   private final RateLimiter warnLogRateLimiter;
   private boolean propertiesOrdered = false;
+  private boolean propertyNamesCacheEnabled = false;
+  private boolean propertyFileCacheEnabled = true;
 
   public ConfigUtil() {
     warnLogRateLimiter = RateLimiter.create(0.017); // 1 warning log output per minute
@@ -68,6 +70,8 @@ public class ConfigUtil {
     initLongPollingInitialDelayInMills();
     initAutoUpdateInjectedSpringProperties();
     initPropertiesOrdered();
+    initPropertyNamesCacheEnabled();
+    initPropertyFileCacheEnabled();
   }
 
   /**
@@ -85,6 +89,15 @@ public class ConfigUtil {
       }
     }
     return appId;
+  }
+
+  /**
+   * Get the apollo label for the current application.
+   *
+   * @return apollo Label
+   */
+  public String getApolloLabel() {
+    return Foundation.app().getApolloLabel();
   }
 
   /**
@@ -244,20 +257,59 @@ public class ConfigUtil {
 
   private String getCustomizedCacheRoot() {
     // 1. Get from System Property
-    String cacheRoot = System.getProperty("apollo.cacheDir");
+    String cacheRoot = System.getProperty(ApolloClientSystemConsts.APOLLO_CACHE_DIR);
     if (Strings.isNullOrEmpty(cacheRoot)) {
       // 2. Get from OS environment variable
-      cacheRoot = System.getenv("APOLLO_CACHEDIR");
+      cacheRoot = System.getenv(ApolloClientSystemConsts.APOLLO_CACHE_DIR_ENVIRONMENT_VARIABLES);
     }
     if (Strings.isNullOrEmpty(cacheRoot)) {
       // 3. Get from server.properties
-      cacheRoot = Foundation.server().getProperty("apollo.cacheDir", null);
+      cacheRoot = Foundation.server().getProperty(ApolloClientSystemConsts.APOLLO_CACHE_DIR, null);
     }
     if (Strings.isNullOrEmpty(cacheRoot)) {
       // 4. Get from app.properties
-      cacheRoot = Foundation.app().getProperty("apollo.cacheDir", null);
+      cacheRoot = Foundation.app().getProperty(ApolloClientSystemConsts.APOLLO_CACHE_DIR, null);
     }
+    if (Strings.isNullOrEmpty(cacheRoot)) {
+      // 5. Get from deprecated config
+      cacheRoot = getDeprecatedCustomizedCacheRoot();
+    }
+    return cacheRoot;
+  }
 
+  @SuppressWarnings("deprecation")
+  private String getDeprecatedCustomizedCacheRoot() {
+    // 1. Get from System Property
+    String cacheRoot = System.getProperty(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR);
+    if (!Strings.isNullOrEmpty(cacheRoot)) {
+      DeprecatedPropertyNotifyUtil.warn(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR,
+          ApolloClientSystemConsts.APOLLO_CACHE_DIR);
+    }
+    if (Strings.isNullOrEmpty(cacheRoot)) {
+      // 2. Get from OS environment variable
+      cacheRoot = System.getenv(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR_ENVIRONMENT_VARIABLES);
+      if (!Strings.isNullOrEmpty(cacheRoot)) {
+        DeprecatedPropertyNotifyUtil
+            .warn(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR_ENVIRONMENT_VARIABLES,
+                ApolloClientSystemConsts.APOLLO_CACHE_DIR_ENVIRONMENT_VARIABLES);
+      }
+    }
+    if (Strings.isNullOrEmpty(cacheRoot)) {
+      // 3. Get from server.properties
+      cacheRoot = Foundation.server().getProperty(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR, null);
+      if (!Strings.isNullOrEmpty(cacheRoot)) {
+        DeprecatedPropertyNotifyUtil.warn(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR,
+            ApolloClientSystemConsts.APOLLO_CACHE_DIR);
+      }
+    }
+    if (Strings.isNullOrEmpty(cacheRoot)) {
+      // 4. Get from app.properties
+      cacheRoot = Foundation.app().getProperty(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR, null);
+      if (!Strings.isNullOrEmpty(cacheRoot)) {
+        DeprecatedPropertyNotifyUtil.warn(ApolloClientSystemConsts.DEPRECATED_APOLLO_CACHE_DIR,
+            ApolloClientSystemConsts.APOLLO_CACHE_DIR);
+      }
+    }
     return cacheRoot;
   }
 
@@ -354,5 +406,44 @@ public class ConfigUtil {
 
   public boolean isPropertiesOrderEnabled() {
     return propertiesOrdered;
+  }
+
+  public boolean isPropertyNamesCacheEnabled() {
+    return propertyNamesCacheEnabled;
+  }
+
+  public boolean isPropertyFileCacheEnabled() {
+    return propertyFileCacheEnabled;
+  }
+
+  private void initPropertyNamesCacheEnabled() {
+    propertyNamesCacheEnabled = getPropertyBoolean(ApolloClientSystemConsts.APOLLO_PROPERTY_NAMES_CACHE_ENABLE,
+            ApolloClientSystemConsts.APOLLO_PROPERTY_NAMES_CACHE_ENABLE_ENVIRONMENT_VARIABLES,
+            propertyNamesCacheEnabled);
+  }
+
+  private void initPropertyFileCacheEnabled() {
+    propertyFileCacheEnabled = getPropertyBoolean(ApolloClientSystemConsts.APOLLO_CACHE_FILE_ENABLE,
+            ApolloClientSystemConsts.APOLLO_CACHE_FILE_ENABLE_ENVIRONMENT_VARIABLES,
+            propertyFileCacheEnabled);
+  }
+
+  private boolean getPropertyBoolean(String propertyName, String envName, boolean defaultVal) {
+    String enablePropertyNamesCache = System.getProperty(propertyName);
+    if (Strings.isNullOrEmpty(enablePropertyNamesCache)) {
+      enablePropertyNamesCache = System.getenv(envName);
+    }
+    if (Strings.isNullOrEmpty(enablePropertyNamesCache)) {
+      enablePropertyNamesCache = Foundation.app().getProperty(propertyName, null);
+    }
+    if (!Strings.isNullOrEmpty(enablePropertyNamesCache)) {
+      try {
+        return Boolean.parseBoolean(enablePropertyNamesCache);
+      } catch (Throwable ex) {
+        logger.warn("Config for {} is invalid: {}, set default value: {}",
+                propertyName, enablePropertyNamesCache, defaultVal);
+      }
+    }
+    return defaultVal;
   }
 }

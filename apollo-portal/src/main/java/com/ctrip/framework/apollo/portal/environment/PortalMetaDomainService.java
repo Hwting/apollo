@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -215,17 +215,14 @@ public class PortalMetaDomainService {
         ScheduledExecutorService scheduledExecutorService =
                 Executors.newScheduledThreadPool(1, ApolloThreadFactory.create("MetaServiceLocator", true));
 
-        scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (String metaServerAddresses : selectedMetaServerAddressCache.keySet()) {
-                        updateMetaServerAddresses(metaServerAddresses);
-                    }
-                } catch (Throwable ex) {
-                    logger.warn(String.format("Refreshing meta server address failed, will retry in %d seconds",
-                            REFRESH_INTERVAL_IN_SECOND), ex);
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            try {
+                for (String metaServerAddresses : selectedMetaServerAddressCache.keySet()) {
+                    updateMetaServerAddresses(metaServerAddresses);
                 }
+            } catch (Throwable ex) {
+                logger.warn(String.format("Refreshing meta server address failed, will retry in %d seconds",
+                        REFRESH_INTERVAL_IN_SECOND), ex);
             }
         }, REFRESH_INTERVAL_IN_SECOND, REFRESH_INTERVAL_IN_SECOND, TimeUnit.SECONDS);
     }

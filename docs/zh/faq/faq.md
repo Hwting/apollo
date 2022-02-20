@@ -1,5 +1,5 @@
 ## 1. Apollo是什么？
-Apollo（阿波罗）是携程框架部门研发的配置管理平台，能够集中化管理应用不同环境、不同集群的配置，配置修改后能够实时推送到应用端，并且具备规范的权限、流程治理等特性。
+Apollo（阿波罗）是一款可靠的分布式配置管理中心，诞生于携程框架研发部，能够集中化管理应用不同环境、不同集群的配置，配置修改后能够实时推送到应用端，并且具备规范的权限、流程治理等特性，适用于微服务配置管理场景。
 
 更多介绍，可以参考[Apollo配置中心介绍](zh/design/apollo-introduction)
 
@@ -54,4 +54,4 @@ Spring Cloud Config的精妙之处在于它的配置存储于Git，这就天然�
 ## 10. Apollo和Disconf相比有什么优点？
 
 由于我们自己并非Disconf的资深用户，所以无法主观地给出评价。
-不过之前Apollo技术支持群中的热心网友[@Krast](https://github.com/krast)做了一个[开源配置中心对比矩阵](https://github.com/ctripcorp/apollo/files/983064/default.pdf)，可以参考一下。
+不过之前Apollo技术支持群中的热心网友[@Krast](https://github.com/krast)做了一个[开源配置中心对比矩阵](https://github.com/apolloconfig/apollo/files/983064/default.pdf)，可以参考一下。

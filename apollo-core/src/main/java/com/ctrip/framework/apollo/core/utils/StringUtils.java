@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -344,44 +344,4 @@ public class StringUtils {
     String format(T obj);
   }
 
-  public static <T> String join(Collection<T> collection, String separator) {
-    return join(collection, separator, new StringFormatter<T>() {
-      @Override
-      public String format(T obj) {
-        return obj.toString();
-      }
-    });
-  }
-
-  public static <T> String join(Collection<T> collection, String separator,
-                                StringFormatter<T> formatter) {
-    Iterator<T> iterator = collection.iterator();
-    // handle null, zero and one elements before building a buffer
-    if (iterator == null) {
-      return null;
-    }
-    if (!iterator.hasNext()) {
-      return EMPTY;
-    }
-    T first = iterator.next();
-    if (!iterator.hasNext()) {
-      return first == null ? "" : formatter.format(first);
-    }
-
-    // two or more elements
-    StringBuilder buf = new StringBuilder(256); // Java default is 16, probably too small
-    if (first != null) {
-      buf.append(formatter.format(first));
-    }
-
-    while (iterator.hasNext()) {
-      buf.append(separator);
-      T obj = iterator.next();
-      if (obj != null) {
-        buf.append(formatter.format(obj));
-      }
-    }
-
-    return buf.toString();
-  }
 }

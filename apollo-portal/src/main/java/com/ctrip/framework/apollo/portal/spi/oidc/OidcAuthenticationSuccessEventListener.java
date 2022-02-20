@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,13 +59,14 @@ public class OidcAuthenticationSuccessEventListener implements
   }
 
   private void oidcUserLogin(OidcUser oidcUser) {
-    if (this.contains(oidcUser.getSubject())) {
-      return;
-    }
     UserInfo newUserInfo = new UserInfo();
     newUserInfo.setUserId(oidcUser.getSubject());
     newUserInfo.setName(oidcUser.getPreferredUsername());
     newUserInfo.setEmail(oidcUser.getEmail());
+    if (this.contains(oidcUser.getSubject())) {
+      this.oidcLocalUserService.updateUserInfo(newUserInfo);
+      return;
+    }
     this.oidcLocalUserService.createLocalUser(newUserInfo);
   }
 

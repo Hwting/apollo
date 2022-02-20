@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,6 @@ public class ClassLoaderUtil {
     return loader;
   }
 
-
   public static String getClassPath() {
     return classPath;
   }
@@ -71,6 +70,11 @@ public class ClassLoaderUtil {
       Class.forName(className);
       return true;
     } catch (ClassNotFoundException ex) {
+      // ignore expected exception
+      return false;
+    } catch (LinkageError ex) {
+      // unexpected error, need to let the user know the actual error
+      logger.error("Failed to load class: {}", className, ex);
       return false;
     }
   }

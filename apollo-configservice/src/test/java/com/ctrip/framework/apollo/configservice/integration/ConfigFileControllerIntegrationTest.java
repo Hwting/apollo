@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,9 @@ public class ConfigFileControllerIntegrationTest extends AbstractBaseIntegration
   private String someDC;
   private String someDefaultCluster;
   private String grayClientIp;
+  private String grayClientLabel;
   private String nonGrayClientIp;
+  private String nonGrayClientLabel;
   private static final Gson GSON = new Gson();
   private ExecutorService executorService;
   private Type mapResponseType = new TypeToken<Map<String, String>>(){}.getType();
@@ -78,8 +80,10 @@ public class ConfigFileControllerIntegrationTest extends AbstractBaseIntegration
     somePublicNamespace = "somePublicNamespace";
     someDC = "someDC";
     grayClientIp = "1.1.1.1";
+    grayClientLabel = "myLabel";
     nonGrayClientIp = "2.2.2.2";
-    executorService = Executors.newSingleThreadExecutor();
+    nonGrayClientLabel = "appLabel";
+    executorService = Executors.newFixedThreadPool(1);
   }
 
   @Test
@@ -112,13 +116,13 @@ public class ConfigFileControllerIntegrationTest extends AbstractBaseIntegration
 
     ResponseEntity<String> response =
         restTemplate
-            .getForEntity("http://{baseurl}/configfiles/{appId}/{clusterName}/{namespace}?ip={clientIp}", String.class,
-                getHostUrl(), someAppId, someDefaultCluster, ConfigConsts.NAMESPACE_APPLICATION, grayClientIp);
+            .getForEntity("http://{baseurl}/configfiles/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}", String.class,
+                getHostUrl(), someAppId, someDefaultCluster, ConfigConsts.NAMESPACE_APPLICATION, grayClientIp, grayClientLabel);
 
     ResponseEntity<String> anotherResponse =
         restTemplate
-            .getForEntity("http://{baseurl}/configfiles/{appId}/{clusterName}/{namespace}?ip={clientIp}", String.class,
-                getHostUrl(), someAppId, someDefaultCluster, ConfigConsts.NAMESPACE_APPLICATION, nonGrayClientIp);
+            .getForEntity("http://{baseurl}/configfiles/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}", String.class,
+                getHostUrl(), someAppId, someDefaultCluster, ConfigConsts.NAMESPACE_APPLICATION, nonGrayClientIp, nonGrayClientLabel);
 
     String result = response.getBody();
     String anotherResult = anotherResponse.getBody();
@@ -235,16 +239,16 @@ public class ConfigFileControllerIntegrationTest extends AbstractBaseIntegration
     ResponseEntity<String> response =
         restTemplate
             .getForEntity(
-                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}",
+                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}",
                 String.class,
-                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace, grayClientIp);
+                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace, grayClientIp, grayClientLabel);
 
     ResponseEntity<String> anotherResponse =
         restTemplate
             .getForEntity(
-                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}",
+                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}",
                 String.class,
-                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace, nonGrayClientIp);
+                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace, nonGrayClientIp, nonGrayClientLabel);
 
     Map<String, String> configs = GSON.fromJson(response.getBody(), mapResponseType);
     Map<String, String> anotherConfigs = GSON.fromJson(anotherResponse.getBody(), mapResponseType);
@@ -276,16 +280,16 @@ public class ConfigFileControllerIntegrationTest extends AbstractBaseIntegration
     ResponseEntity<String> response =
         restTemplate
             .getForEntity(
-                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}",
+                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}",
                 String.class,
-                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace.toUpperCase(), grayClientIp);
+                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace.toUpperCase(), grayClientIp, grayClientLabel);
 
     ResponseEntity<String> anotherResponse =
         restTemplate
             .getForEntity(
-                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}",
+                "http://{baseurl}/configfiles/json/{appId}/{clusterName}/{namespace}?ip={clientIp}&label={clientLabel}",
                 String.class,
-                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace.toUpperCase(), nonGrayClientIp);
+                getHostUrl(), someAppId, someDefaultCluster, somePublicNamespace.toUpperCase(), nonGrayClientIp, nonGrayClientLabel);
 
     Map<String, String> configs = GSON.fromJson(response.getBody(), mapResponseType);
     Map<String, String> anotherConfigs = GSON.fromJson(anotherResponse.getBody(), mapResponseType);

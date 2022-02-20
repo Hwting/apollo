@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,16 @@ public class ApolloOpenApiClient {
    * Get all App information
    */
   public List<OpenAppDTO> getAllApps() {
-    return appService.getAppsInfo(null);
+    return appService.getAllApps();
+  }
+
+  /**
+   * Get applications which can be operated by current open api client.
+   *
+   * @return app's information
+   */
+  public List<OpenAppDTO> getAuthorizedApps() {
+    return this.appService.getAuthorizedApps();
   }
 
   /**

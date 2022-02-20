@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,8 @@ import org.springframework.http.HttpHeaders;
  * @author Jason Song(song_s@ctrip.com)
  */
 public class ConsumerAuthenticationFilter implements Filter {
-  private ConsumerAuthUtil consumerAuthUtil;
-  private ConsumerAuditUtil consumerAuditUtil;
+  private final ConsumerAuthUtil consumerAuthUtil;
+  private final ConsumerAuditUtil consumerAuditUtil;
 
   public ConsumerAuthenticationFilter(ConsumerAuthUtil consumerAuthUtil, ConsumerAuditUtil consumerAuditUtil) {
     this.consumerAuthUtil = consumerAuthUtil;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
  */
 package com.ctrip.framework.apollo.util.factory;
 
+import com.ctrip.framework.apollo.core.ApolloClientSystemConsts;
 import java.util.Properties;
 
 /**
@@ -28,7 +29,7 @@ public interface PropertiesFactory {
   /**
    * Configuration to keep properties order as same as line order in .yml/.yaml/.properties file.
    */
-  String APOLLO_PROPERTY_ORDER_ENABLE = "apollo.property.order.enable";
+  String APOLLO_PROPERTY_ORDER_ENABLE = ApolloClientSystemConsts.APOLLO_PROPERTY_ORDER_ENABLE;
 
   /**
    * <pre>

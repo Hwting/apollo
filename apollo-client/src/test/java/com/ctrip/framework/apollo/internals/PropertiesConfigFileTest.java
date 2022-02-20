@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,5 +166,38 @@ public class PropertiesConfigFileTest {
 
     assertTrue(configFile.hasContent());
     assertTrue(configFile.getContent().contains(String.format("%s=%s", someKey, someValue)));
+  }
+
+  @Test
+  public void testIfCompatibleWithProperties() {
+    Properties someProperties = new Properties();
+    String someKey = "someKey";
+    String someValue = "someValue";
+    someProperties.setProperty(someKey, someValue);
+
+    when(configRepository.getConfig()).thenReturn(someProperties);
+
+    PropertiesConfigFile configFile = new PropertiesConfigFile(someNamespace, configRepository);
+
+    assertEquals(configFile.asProperties(),someProperties);
+    assertEquals(ConfigFileFormat.Properties, configFile.getConfigFileFormat());
+    assertEquals(someNamespace, configFile.getNamespace());
+    assertTrue(configFile.hasContent());
+    assertTrue(configFile.getContent().contains(String.format("%s=%s", someKey, someValue)));
+  }
+
+  @Test
+  public void testIfCompatibleWithEmptyProperties() {
+    Properties someProperties = new Properties();
+
+    when(configRepository.getConfig()).thenReturn(someProperties);
+
+    PropertiesConfigFile configFile = new PropertiesConfigFile(someNamespace, configRepository);
+
+    assertEquals(configFile.asProperties(),someProperties);
+    assertEquals(ConfigFileFormat.Properties, configFile.getConfigFileFormat());
+    assertEquals(someNamespace, configFile.getNamespace());
+    assertFalse(configFile.hasContent());
+
   }
 }

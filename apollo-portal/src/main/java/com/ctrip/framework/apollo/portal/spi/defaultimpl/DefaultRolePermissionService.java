@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,13 +150,11 @@ public class DefaultRolePermissionService implements RolePermissionService {
 
         List<UserRole> userRoles = userRoleRepository.findByRoleId(role.getId());
 
-        Set<UserInfo> users = userRoles.stream().map(userRole -> {
+        return userRoles.stream().map(userRole -> {
             UserInfo userInfo = new UserInfo();
             userInfo.setUserId(userRole.getUserId());
             return userInfo;
         }).collect(Collectors.toSet());
-
-        return users;
     }
 
     /**

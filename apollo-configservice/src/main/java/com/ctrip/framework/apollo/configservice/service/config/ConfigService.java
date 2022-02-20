@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ public interface ConfigService extends ReleaseMessageListener {
    *
    * @param clientAppId the client's app id
    * @param clientIp the client ip
+   * @param clientLabel the client label
    * @param configAppId the requested config's app id
    * @param configClusterName the requested config's cluster name
    * @param configNamespace the requested config's namespace name
@@ -37,6 +38,6 @@ public interface ConfigService extends ReleaseMessageListener {
    * @param clientMessages the messages received in client side
    * @return the Release
    */
-  Release loadConfig(String clientAppId, String clientIp, String configAppId, String
+  Release loadConfig(String clientAppId, String clientIp, String clientLabel, String configAppId, String
       configClusterName, String configNamespace, String dataCenter, ApolloNotificationMessages clientMessages);
 }

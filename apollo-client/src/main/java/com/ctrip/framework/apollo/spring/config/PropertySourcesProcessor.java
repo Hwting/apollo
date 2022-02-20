@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
 
   private final ConfigPropertySourceFactory configPropertySourceFactory = SpringInjector
       .getInstance(ConfigPropertySourceFactory.class);
-  private final ConfigUtil configUtil = ApolloInjector.getInstance(ConfigUtil.class);
+  private ConfigUtil configUtil;
   private ConfigurableEnvironment environment;
 
   public static boolean addNamespaces(Collection<String> namespaces, int order) {
@@ -71,6 +71,7 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
 
   @Override
   public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+    this.configUtil = ApolloInjector.getInstance(ConfigUtil.class);
     initializePropertySources();
     initializeAutoUpdatePropertiesFeature(beanFactory);
   }
@@ -80,7 +81,12 @@ public class PropertySourcesProcessor implements BeanFactoryPostProcessor, Envir
       //already initialized
       return;
     }
-    CompositePropertySource composite = new CompositePropertySource(PropertySourcesConstants.APOLLO_PROPERTY_SOURCE_NAME);
+    CompositePropertySource composite;
+    if (configUtil.isPropertyNamesCacheEnabled()) {
+      composite = new CachedCompositePropertySource(PropertySourcesConstants.APOLLO_PROPERTY_SOURCE_NAME);
+    } else {
+      composite = new CompositePropertySource(PropertySourcesConstants.APOLLO_PROPERTY_SOURCE_NAME);
+    }
 
     //sort by order asc
     ImmutableSortedSet<Integer> orders = ImmutableSortedSet.copyOf(NAMESPACE_NAMES.keySet());

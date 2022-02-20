@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,25 +17,29 @@
 package com.ctrip.framework.apollo.portal.controller;
 
 
-import com.ctrip.framework.apollo.common.dto.PageDTO;
+import com.ctrip.framework.apollo.common.dto.AppDTO;
 import com.ctrip.framework.apollo.common.entity.App;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.common.http.MultiResponseEntity;
 import com.ctrip.framework.apollo.common.http.RichResponseEntity;
+import com.ctrip.framework.apollo.common.utils.BeanUtils;
 import com.ctrip.framework.apollo.core.ConfigConsts;
-import com.ctrip.framework.apollo.portal.environment.Env;
 import com.ctrip.framework.apollo.portal.component.PortalSettings;
+import com.ctrip.framework.apollo.portal.enricher.adapter.AppDtoUserInfoEnrichedAdapter;
 import com.ctrip.framework.apollo.portal.entity.model.AppModel;
 import com.ctrip.framework.apollo.portal.entity.po.Role;
 import com.ctrip.framework.apollo.portal.entity.vo.EnvClusterInfo;
+import com.ctrip.framework.apollo.portal.environment.Env;
 import com.ctrip.framework.apollo.portal.listener.AppCreationEvent;
 import com.ctrip.framework.apollo.portal.listener.AppDeletionEvent;
 import com.ctrip.framework.apollo.portal.listener.AppInfoChangedEvent;
+import com.ctrip.framework.apollo.portal.service.AdditionalUserInfoEnrichService;
 import com.ctrip.framework.apollo.portal.service.AppService;
 import com.ctrip.framework.apollo.portal.service.RoleInitializationService;
 import com.ctrip.framework.apollo.portal.service.RolePermissionService;
 import com.ctrip.framework.apollo.portal.spi.UserInfoHolder;
 import com.ctrip.framework.apollo.portal.util.RoleUtils;
+import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +47,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,6 +59,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 
 import javax.validation.Valid;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -71,6 +75,7 @@ public class AppController {
   private final ApplicationEventPublisher publisher;
   private final RolePermissionService rolePermissionService;
   private final RoleInitializationService roleInitializationService;
+  private final AdditionalUserInfoEnrichService additionalUserInfoEnrichService;
 
   public AppController(
       final UserInfoHolder userInfoHolder,
@@ -78,30 +83,23 @@ public class AppController {
       final PortalSettings portalSettings,
       final ApplicationEventPublisher publisher,
       final RolePermissionService rolePermissionService,
-      final RoleInitializationService roleInitializationService) {
+      final RoleInitializationService roleInitializationService,
+      final AdditionalUserInfoEnrichService additionalUserInfoEnrichService) {
     this.userInfoHolder = userInfoHolder;
     this.appService = appService;
     this.portalSettings = portalSettings;
     this.publisher = publisher;
     this.rolePermissionService = rolePermissionService;
     this.roleInitializationService = roleInitializationService;
+    this.additionalUserInfoEnrichService = additionalUserInfoEnrichService;
   }
 
   @GetMapping
   public List<App> findApps(@RequestParam(value = "appIds", required = false) String appIds) {
-    if (StringUtils.isEmpty(appIds)) {
+    if (Strings.isNullOrEmpty(appIds)) {
       return appService.findAll();
     }
     return appService.findByAppIds(Sets.newHashSet(appIds.split(",")));
-  }
-
-  @GetMapping("/search/by-appid-or-name")
-  public PageDTO<App> searchByAppIdOrAppName(@RequestParam(value = "query", required = false) String query,
-      Pageable pageable) {
-    if (StringUtils.isEmpty(query)) {
-      return appService.findAll(pageable);
-    }
-    return appService.searchByAppIdOrAppName(query, pageable);
   }
 
   @GetMapping("/by-owner")
@@ -165,7 +163,7 @@ public class AppController {
         response.addResponseEntity(RichResponseEntity.ok(appService.createEnvNavNode(env, appId)));
       } catch (Exception e) {
         response.addResponseEntity(RichResponseEntity.error(HttpStatus.INTERNAL_SERVER_ERROR,
-            "load env:" + env.name() + " cluster error." + e
+            "load env:" + env.getName() + " cluster error." + e
                 .getMessage()));
       }
     }
@@ -176,15 +174,19 @@ public class AppController {
   public ResponseEntity<Void> create(@PathVariable String env, @Valid @RequestBody App app) {
     appService.createAppInRemote(Env.valueOf(env), app);
 
-    roleInitializationService.initNamespaceSpecificEnvRoles(app.getAppId(), ConfigConsts.NAMESPACE_APPLICATION, env, userInfoHolder.getUser().getUserId());
+    roleInitializationService.initNamespaceSpecificEnvRoles(app.getAppId(), ConfigConsts.NAMESPACE_APPLICATION,
+            env, userInfoHolder.getUser().getUserId());
 
     return ResponseEntity.ok().build();
   }
 
   @GetMapping("/{appId:.+}")
-  public App load(@PathVariable String appId) {
-
-    return appService.load(appId);
+  public AppDTO load(@PathVariable String appId) {
+    App app = appService.load(appId);
+    AppDTO appDto = BeanUtils.transform(AppDTO.class, app);
+    additionalUserInfoEnrichService.enrichAdditionalUserInfo(Collections.singletonList(appDto),
+        AppDtoUserInfoEnrichedAdapter::new);
+    return appDto;
   }
 
 
@@ -217,7 +219,6 @@ public class AppController {
     }
 
     return response;
-
   }
 
   private App transformToApp(AppModel appModel) {

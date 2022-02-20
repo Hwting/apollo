@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,11 @@ public class CommitService {
     return commitRepository
         .findByAppIdAndClusterNameAndNamespaceNameAndDataChangeLastModifiedTimeGreaterThanEqualOrderByIdDesc(
             appId, clusterName, namespaceName, lastModifiedTime, page);
+  }
+
+  public List<Commit> findByKey(String appId, String clusterName, String namespaceName, String key,Pageable page){
+    String queryKey = "\"key\":\""+ key +"\"";
+    return commitRepository.findByAppIdAndClusterNameAndNamespaceNameAndChangeSetsLikeOrderByIdDesc(appId, clusterName, namespaceName, "%"+ queryKey + "%", page);
   }
 
   @Transactional

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ public class NotificationControllerIntegrationTest extends AbstractBaseIntegrati
     someCluster = ConfigConsts.CLUSTER_NAME_DEFAULT;
     defaultNamespace = ConfigConsts.NAMESPACE_APPLICATION;
     somePublicNamespace = "somePublicNamespace";
-    executorService = Executors.newSingleThreadExecutor();
+    executorService = Executors.newFixedThreadPool(1);
   }
 
   @Test(timeout = 5000L)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public class ApolloNotificationMessages {
   private Map<String, Long> details;
 
   public ApolloNotificationMessages() {
-    this(Maps.<String, Long>newHashMap());
+    this(Maps.<String, Long>newTreeMap());
   }
 
   private ApolloNotificationMessages(Map<String, Long> details) {

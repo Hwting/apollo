@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,17 +42,16 @@ public class FilterLdapByGroupUserSearch extends FilterBasedLdapUserSearch {
 
   private static final Logger logger = LoggerFactory.getLogger(FilterLdapByGroupUserSearch.class);
   private static final String MEMBER_UID_ATTR_NAME = "memberUid";
-  private String searchBase;
-  private String groupBase;
-  private String groupSearch;
-  private String rdnKey;
-  private String groupMembershipAttrName;
-  private String loginIdAttrName;
+  private final String searchBase;
+  private final String groupBase;
+  private final String groupSearch;
+  private final String rdnKey;
+  private final String groupMembershipAttrName;
+  private final String loginIdAttrName;
 
   private final SearchControls searchControls = new SearchControls();
 
-  private BaseLdapPathContextSource contextSource;
-
+  private final BaseLdapPathContextSource contextSource;
 
   public FilterLdapByGroupUserSearch(String searchBase, String searchFilter,
       String groupBase, BaseLdapPathContextSource contextSource, String groupSearch,

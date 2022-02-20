@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,11 +169,7 @@ public class InstanceConfigAuditUtil implements InitializingBean {
     auditExecutorService.submit(() -> {
       while (!auditStopped.get() && !Thread.currentThread().isInterrupted()) {
         try {
-          InstanceConfigAuditModel model = audits.poll();
-          if (model == null) {
-            TimeUnit.SECONDS.sleep(1);
-            continue;
-          }
+          InstanceConfigAuditModel model = audits.take();
           doAudit(model);
         } catch (Throwable ex) {
           Tracer.logError(ex);

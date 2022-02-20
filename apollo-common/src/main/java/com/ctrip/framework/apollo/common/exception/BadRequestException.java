@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,12 @@ import org.springframework.http.HttpStatus;
 
 public class BadRequestException extends AbstractApolloHttpException {
 
-
-  public BadRequestException(String str) {
-    super(str);
+  /**
+   * @see AbstractApolloHttpException#AbstractApolloHttpException(String, Object...) 
+   */
+  public BadRequestException(String msgtpl, Object... args) {
+    super(msgtpl, args);
     setHttpStatus(HttpStatus.BAD_REQUEST);
   }
+
 }

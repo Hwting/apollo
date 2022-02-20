@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,14 @@ appService.service('CommitService', ['$resource', '$q','AppUtil', function ($res
         }
     });
     return {
-        find_commits: function (appId, env, clusterName, namespaceName, page, size) {
+        find_commits: function (appId, env, clusterName, namespaceName, key, page, size) {
             var d = $q.defer();
             commit_resource.find_commits({
                                              appId: appId,
                                              env: env,
                                              clusterName: clusterName,
                                              namespaceName: namespaceName,
+                                             key: key,
                                              page: page,
                                              size: size
                                          },

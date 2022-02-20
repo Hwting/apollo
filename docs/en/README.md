@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/ctripcorp/apollo/master/doc/images/logo/logo-simple.png" alt="apollo-logo" width="40%">
+<img src="https://cdn.jsdelivr.net/gh/apolloconfig/apollo@master/doc/images/logo/logo-simple.png" alt="apollo-logo" width="40%">
 
 # Introduction
 
@@ -82,15 +82,15 @@ Demo Environment:
 # Development
 * [Apollo Development Guide](zh/development/apollo-development-guide)
 * Code Styles
-    * [Eclipse Code Style](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/eclipse-java-google-style.xml)
-    * [Intellij Code Style](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/intellij-java-google-style.xml)
+    * [Eclipse Code Style](https://github.com/apolloconfig/apollo/blob/master/apollo-buildtools/style/eclipse-java-google-style.xml)
+    * [Intellij Code Style](https://github.com/apolloconfig/apollo/blob/master/apollo-buildtools/style/intellij-java-google-style.xml)
 
 # Deployment
 * [Quick Start](zh/deployment/quick-start)
 * [Distributed Deployment Guide](zh/deployment/distributed-deployment-guide)
 
 # Release Notes
-* [Releases](https://github.com/ctripcorp/apollo/releases)
+* [Releases](https://github.com/apolloconfig/apollo/releases)
 
 # FAQ
 * [FAQ](zh/faq/faq)
@@ -98,21 +98,18 @@ Demo Environment:
 
 # Presentation
 * [Design and Implementation Details of Apollo](http://www.itdks.com/dakalive/detail/3420)
-    * [Slides](https://myslide.cn/slides/10168)
+  * [Slides](https://github.com/apolloconfig/apollo-community/blob/master/slides/design-and-implementation-of-apollo.pdf)
 * [Configuration Center Makes Microservices Smart](https://2018.qconshanghai.com/presentation/799)
-    * [Slides](https://myslide.cn/slides/10035)
+  * [Slides](https://github.com/apolloconfig/apollo-community/blob/master/slides/configuration-center-makes-microservices-smart.pdf)
 
 # Publication
 * [Design and Implementation Details of Apollo](https://www.infoq.cn/article/open-source-configuration-center-apollo)
 * [Configuration Center Makes Microservices Smart](https://mp.weixin.qq.com/s/iDmYJre_ULEIxuliu1EbIQ)
 
-# Contribution
-
-Please make sure to read the [Contributing Guide](https://github.com/ctripcorp/apollo/blob/master/CONTRIBUTING.md) before making a pull request.
-
-Thanks for all the people who contributed to Apollo!
-
-<a href="https://github.com/ctripcorp/apollo/graphs/contributors"><img src="https://opencollective.com/apollo/contributors.svg?width=880&button=false" /></a>
+# Community
+  * [Apollo Team](en/community/team)
+  * [Community Governance](https://github.com/apolloconfig/apollo/blob/master/GOVERNANCE.md)
+  * [Contributing Guide](https://github.com/apolloconfig/apollo/blob/master/CONTRIBUTING.md)
 
 # License
-The project is licensed under the [Apache 2 license](https://github.com/ctripcorp/apollo/blob/master/LICENSE).
+The project is licensed under the [Apache 2 license](https://github.com/apolloconfig/apollo/blob/master/LICENSE).

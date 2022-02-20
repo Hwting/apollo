@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  */
 package com.ctrip.framework.apollo.core.enums;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
@@ -41,4 +41,26 @@ public class EnvUtilsTest {
   public void testFromInvalidString() throws Exception {
     Env.fromString("someInvalidEnv");
   }
+
+  @Test
+  public void fixTypoInProductionTest() {
+    Env prod = Env.fromString("PROD");
+    assertEquals(prod, Env.PRO);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void fromBlankStringTest() {
+    Env.fromString("");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void fromSpacesStringTest() {
+    Env.fromString("    ");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void fromNullStringTest() {
+    Env.fromString(null);
+  }
+
 }

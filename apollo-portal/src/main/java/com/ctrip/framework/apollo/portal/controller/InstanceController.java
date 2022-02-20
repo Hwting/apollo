@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ public class InstanceController {
                                                               @RequestParam String clusterName,
                                                               @RequestParam String namespaceName) {
 
-        int count = instanceService.getInstanceCountByNamepsace(appId, Env.valueOf(env), clusterName, namespaceName);
+        int count = instanceService.getInstanceCountByNamespace(appId, Env.valueOf(env), clusterName, namespaceName);
         return ResponseEntity.ok(new Number(count));
     }
 

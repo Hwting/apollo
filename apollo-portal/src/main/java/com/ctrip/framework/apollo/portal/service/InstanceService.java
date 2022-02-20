@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public class InstanceService {
     return instanceAPI.getByNamespace(appId, env, clusterName, namespaceName, instanceAppId, page, size);
   }
 
-  public int getInstanceCountByNamepsace(String appId, Env env, String clusterName, String namespaceName){
+  public int getInstanceCountByNamespace(String appId, Env env, String clusterName, String namespaceName){
     return instanceAPI.getInstanceCountByNamespace(appId, env, clusterName, namespaceName);
   }
 

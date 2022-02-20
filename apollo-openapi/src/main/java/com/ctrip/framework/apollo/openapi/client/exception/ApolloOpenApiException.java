@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Apollo Authors
+ * Copyright 2022 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
 package com.ctrip.framework.apollo.openapi.client.exception;
 
 public class ApolloOpenApiException extends RuntimeException {
-
-  private int status;
+  private final int status;
 
   public ApolloOpenApiException(int status, String reason, String message) {
     super(String.format("Request to apollo open api failed, status code: %d, reason: %s, message: %s", status, reason,
