@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,11 @@ public interface UserRepository extends PagingAndSortingRepository<UserPO, Long>
 
   List<UserPO> findByUsernameLikeAndEnabled(String username, int enabled);
 
+  List<UserPO> findByUsernameLike(String username);
+
   List<UserPO> findByUserDisplayNameLikeAndEnabled(String userDisplayName, int enabled);
+
+  List<UserPO> findByUserDisplayNameLike(String userDisplayName);
 
   UserPO findByUsername(String username);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,14 +150,15 @@ public class ReleaseMessageServiceWithCacheTest {
     assertNotNull(latestReleaseMsg);
     assertEquals(501, latestReleaseMsg.getId());
     assertEquals(antherMsgContent, latestReleaseMsg.getMessage());
-
+    
+    List<String> msgContentList = Arrays.asList(someMsgContent, antherMsgContent);
     List<ReleaseMessage> latestReleaseMsgGroupByMsgContent =
         releaseMessageServiceWithCache
-            .findLatestReleaseMessagesGroupByMessages(Sets.newHashSet(someMsgContent, antherMsgContent));
+            .findLatestReleaseMessagesGroupByMessages(Sets.newLinkedHashSet(msgContentList));
 
     assertEquals(2, latestReleaseMsgGroupByMsgContent.size());
-    assertEquals(500, latestReleaseMsgGroupByMsgContent.get(1).getId());
-    assertEquals(501, latestReleaseMsgGroupByMsgContent.get(0).getId());
+    assertEquals(500, latestReleaseMsgGroupByMsgContent.get(0).getId());
+    assertEquals(501, latestReleaseMsgGroupByMsgContent.get(1).getId());
   }
 
   @Test

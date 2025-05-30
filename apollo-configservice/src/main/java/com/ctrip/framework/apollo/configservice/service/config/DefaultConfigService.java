@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,9 @@ package com.ctrip.framework.apollo.configservice.service.config;
 
 import com.ctrip.framework.apollo.biz.entity.Release;
 import com.ctrip.framework.apollo.biz.entity.ReleaseMessage;
+import com.ctrip.framework.apollo.biz.grayReleaseRule.GrayReleaseRulesHolder;
 import com.ctrip.framework.apollo.biz.service.ReleaseService;
 import com.ctrip.framework.apollo.core.dto.ApolloNotificationMessages;
-
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * config service with no cache
@@ -30,8 +29,15 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class DefaultConfigService extends AbstractConfigService {
 
-  @Autowired
-  private ReleaseService releaseService;
+  private final ReleaseService releaseService;
+  private final GrayReleaseRulesHolder grayReleaseRulesHolder;
+
+  public DefaultConfigService(final ReleaseService releaseService,
+      final GrayReleaseRulesHolder grayReleaseRulesHolder) {
+    super(grayReleaseRulesHolder);
+    this.releaseService = releaseService;
+    this.grayReleaseRulesHolder = grayReleaseRulesHolder;
+  }
 
   @Override
   protected Release findActiveOne(long id, ApolloNotificationMessages clientMessages) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,9 @@
 package com.ctrip.framework.apollo;
 
 import com.ctrip.framework.apollo.openapi.auth.ConsumerPermissionValidator;
+import com.ctrip.framework.apollo.openapi.entity.ConsumerToken;
 import com.ctrip.framework.apollo.openapi.util.ConsumerAuthUtil;
-import com.ctrip.framework.apollo.portal.component.PermissionValidator;
+import com.ctrip.framework.apollo.portal.component.UserPermissionValidator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -41,7 +42,7 @@ public class SkipAuthorizationConfiguration {
   @Bean
   public ConsumerPermissionValidator consumerPermissionValidator() {
     final ConsumerPermissionValidator mock = mock(ConsumerPermissionValidator.class);
-    when(mock.hasCreateNamespacePermission(any(), any())).thenReturn(true);
+    when(mock.hasCreateNamespacePermission(any())).thenReturn(true);
     return mock;
   }
 
@@ -50,14 +51,21 @@ public class SkipAuthorizationConfiguration {
   public ConsumerAuthUtil consumerAuthUtil() {
     final ConsumerAuthUtil mock = mock(ConsumerAuthUtil.class);
     when(mock.getConsumerId(any())).thenReturn(1L);
+
+    ConsumerToken someConsumerToken = new ConsumerToken();
+    someConsumerToken.setConsumerId(1L);
+    someConsumerToken.setToken("some-token");
+    someConsumerToken.setRateLimit(20);
+    when(mock.getConsumerToken(any())).thenReturn(someConsumerToken);
     return mock;
   }
 
   @Primary
-  @Bean("permissionValidator")
-  public PermissionValidator permissionValidator() {
-    final PermissionValidator mock = mock(PermissionValidator.class);
+  @Bean("userPermissionValidator")
+  public UserPermissionValidator permissionValidator() {
+    final UserPermissionValidator mock = mock(UserPermissionValidator.class);
     when(mock.isSuperAdmin()).thenReturn(true);
+    when(mock.hasAssignRolePermission(any())).thenReturn(true);
     return mock;
   }
 }

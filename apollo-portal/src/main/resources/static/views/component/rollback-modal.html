@@ -1,6 +1,6 @@
 <form id="rollbackModal" class="modal fade form-horizontal" ng-submit="showRollbackAlertDialog()">
     <!--
-      ~ Copyright 2022 Apollo Authors
+      ~ Copyright 2024 Apollo Authors
       ~
       ~ Licensed under the Apache License, Version 2.0 (the "License");
       ~ you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
                     {{'Component.RollbackTo.Tips' | translate }}
                 </div>
 
-                <div class="form-group" style="margin-top: 15px;">
+                <div class="form-group pre-scrollable" style="margin-top: 15px;max-height: 490px">
                     <!--properties format-->
                     <div class="col-sm-12"
                         ng-if="toRollbackNamespace.releaseCompareResult.length > 0 && toRollbackNamespace.isPropertiesFormat">

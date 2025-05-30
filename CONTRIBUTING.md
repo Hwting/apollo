@@ -12,9 +12,7 @@ Our code style is in line with [Google Java Style Guide](https://google.github.i
 
 We provide template files [intellij-java-google-style.xml](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/intellij-java-google-style.xml) for IntelliJ IDEA and [eclipse-java-google-style.xml](https://github.com/ctripcorp/apollo/blob/master/apollo-buildtools/style/eclipse-java-google-style.xml) for Eclipse. If you use other IDEs, then you may config manually by referencing the template files.
 
-* Make sure all new .java files have a simple Javadoc class comment with at least an `@author` tag identifying you, and preferably at least a paragraph on what the class is for.
-
-* Add yourself as an @author to the .java files that you modify substantially (more than cosmetic changes).
+* Make sure all new .java files have a simple Javadoc class comment on what the class is for.
 
 * Add some Javadocs and, if you change the namespace, some XSD doc elements.
 
@@ -34,4 +32,6 @@ We provide template files [intellij-java-google-style.xml](https://github.com/ct
         * `git checkout -b <some-branch-name> <remote>/master`
         * `git merge --squash <current-feature-branch>`
 
-* When writing a commit message please follow these conventions: if you are fixing an existing issue, please add Fixes #XXX at the end of the commit message (where XXX is the issue number).
+* For commits, we adhere to the conventional commits format. For more details, refer to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+
+* When crafting commit messages, please adhere to the following conventions: if your commit addresses an existing issue, append "Fixes #XXX" to the end of the commit message (where XXX is the issue number).

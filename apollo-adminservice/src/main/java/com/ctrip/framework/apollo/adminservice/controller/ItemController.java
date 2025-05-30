@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.ctrip.framework.apollo.adminservice.controller;
 
 import com.ctrip.framework.apollo.adminservice.aop.PreAcquireNamespaceLock;
+import com.ctrip.framework.apollo.biz.config.BizConfig;
 import com.ctrip.framework.apollo.biz.entity.Commit;
 import com.ctrip.framework.apollo.biz.entity.Item;
 import com.ctrip.framework.apollo.biz.entity.Namespace;
@@ -27,16 +28,21 @@ import com.ctrip.framework.apollo.biz.service.NamespaceService;
 import com.ctrip.framework.apollo.biz.service.ReleaseService;
 import com.ctrip.framework.apollo.biz.utils.ConfigChangeContentBuilder;
 import com.ctrip.framework.apollo.common.dto.ItemDTO;
+import com.ctrip.framework.apollo.common.dto.ItemInfoDTO;
+import com.ctrip.framework.apollo.common.dto.PageDTO;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.common.exception.NotFoundException;
 import com.ctrip.framework.apollo.common.utils.BeanUtils;
 import com.ctrip.framework.apollo.core.utils.StringUtils;
-
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,13 +59,14 @@ public class ItemController {
   private final NamespaceService namespaceService;
   private final CommitService commitService;
   private final ReleaseService releaseService;
+  private final BizConfig bizConfig;
 
-
-  public ItemController(final ItemService itemService, final NamespaceService namespaceService, final CommitService commitService, final ReleaseService releaseService) {
+  public ItemController(final ItemService itemService, final NamespaceService namespaceService, final CommitService commitService, final ReleaseService releaseService, final BizConfig bizConfig) {
     this.itemService = itemService;
     this.namespaceService = namespaceService;
     this.commitService = commitService;
     this.releaseService = releaseService;
+    this.bizConfig = bizConfig;
   }
 
   @PreAcquireNamespaceLock
@@ -69,23 +76,23 @@ public class ItemController {
                         @PathVariable("namespaceName") String namespaceName, @RequestBody ItemDTO dto) {
     Item entity = BeanUtils.transform(Item.class, dto);
 
-    ConfigChangeContentBuilder builder = new ConfigChangeContentBuilder();
     Item managedEntity = itemService.findOne(appId, clusterName, namespaceName, entity.getKey());
     if (managedEntity != null) {
-      throw new BadRequestException("item already exists");
+      throw BadRequestException.itemAlreadyExists(entity.getKey());
     }
-    entity = itemService.save(entity);
-    builder.createItem(entity);
-    dto = BeanUtils.transform(ItemDTO.class, entity);
 
-    Commit commit = new Commit();
-    commit.setAppId(appId);
-    commit.setClusterName(clusterName);
-    commit.setNamespaceName(namespaceName);
-    commit.setChangeSets(builder.build());
-    commit.setDataChangeCreatedBy(dto.getDataChangeLastModifiedBy());
-    commit.setDataChangeLastModifiedBy(dto.getDataChangeLastModifiedBy());
-    commitService.save(commit);
+    if (bizConfig.isItemNumLimitEnabled()) {
+      int itemCount = itemService.findNonEmptyItemCount(entity.getNamespaceId());
+      if (itemCount >= bizConfig.itemNumLimit()) {
+        throw new BadRequestException("The maximum number of items (" + bizConfig.itemNumLimit() + ") for this namespace has been reached. Current item count is " + itemCount + ".");
+      }
+    }
+
+    entity = itemService.save(entity);
+    dto = BeanUtils.transform(ItemDTO.class, entity);
+    commitService.createCommit(appId, clusterName, namespaceName, new ConfigChangeContentBuilder().createItem(entity).build(),
+        dto.getDataChangeLastModifiedBy()
+    );
 
     return dto;
   }
@@ -126,13 +133,13 @@ public class ItemController {
                         @RequestBody ItemDTO itemDTO) {
     Item managedEntity = itemService.findOne(itemId);
     if (managedEntity == null) {
-      throw new NotFoundException("item not found for itemId " + itemId);
+      throw NotFoundException.itemNotFound(appId, clusterName, namespaceName, itemId);
     }
 
     Namespace namespace = namespaceService.findOne(appId, clusterName, namespaceName);
     // In case someone constructs an attack scenario
     if (namespace == null || namespace.getId() != managedEntity.getNamespaceId()) {
-      throw new BadRequestException("Invalid request, item and namespace do not match!");
+      throw BadRequestException.namespaceNotMatch();
     }
 
     Item entity = BeanUtils.transform(Item.class, itemDTO);
@@ -141,7 +148,8 @@ public class ItemController {
 
     Item beforeUpdateItem = BeanUtils.transform(Item.class, managedEntity);
 
-    //protect. only value,comment,lastModifiedBy can be modified
+    //protect. only value,type,comment,lastModifiedBy can be modified
+    managedEntity.setType(entity.getType());
     managedEntity.setValue(entity.getValue());
     managedEntity.setComment(entity.getComment());
     managedEntity.setDataChangeLastModifiedBy(entity.getDataChangeLastModifiedBy());
@@ -151,14 +159,7 @@ public class ItemController {
     itemDTO = BeanUtils.transform(ItemDTO.class, entity);
 
     if (builder.hasContent()) {
-      Commit commit = new Commit();
-      commit.setAppId(appId);
-      commit.setClusterName(clusterName);
-      commit.setNamespaceName(namespaceName);
-      commit.setChangeSets(builder.build());
-      commit.setDataChangeCreatedBy(itemDTO.getDataChangeLastModifiedBy());
-      commit.setDataChangeLastModifiedBy(itemDTO.getDataChangeLastModifiedBy());
-      commitService.save(commit);
+      commitService.createCommit(appId, clusterName, namespaceName, builder.build(), itemDTO.getDataChangeLastModifiedBy());
     }
 
     return itemDTO;
@@ -169,20 +170,16 @@ public class ItemController {
   public void delete(@PathVariable("itemId") long itemId, @RequestParam String operator) {
     Item entity = itemService.findOne(itemId);
     if (entity == null) {
-      throw new NotFoundException("item not found for itemId " + itemId);
+      throw NotFoundException.itemNotFound(itemId);
     }
     itemService.delete(entity.getId(), operator);
 
     Namespace namespace = namespaceService.findOne(entity.getNamespaceId());
 
-    Commit commit = new Commit();
-    commit.setAppId(namespace.getAppId());
-    commit.setClusterName(namespace.getClusterName());
-    commit.setNamespaceName(namespace.getNamespaceName());
-    commit.setChangeSets(new ConfigChangeContentBuilder().deleteItem(entity).build());
-    commit.setDataChangeCreatedBy(operator);
-    commit.setDataChangeLastModifiedBy(operator);
-    commitService.save(commit);
+    commitService.createCommit(namespace.getAppId(), namespace.getClusterName(), namespace.getNamespaceName(),
+        new ConfigChangeContentBuilder().deleteItem(entity).build(), operator
+    );
+
   }
 
   @GetMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items")
@@ -215,11 +212,19 @@ public class ItemController {
     return Collections.emptyList();
   }
 
+  @GetMapping("/items-search/key-and-value")
+  public PageDTO<ItemInfoDTO> getItemInfoBySearch(@RequestParam(value = "key", required = false) String key,
+                                                  @RequestParam(value = "value", required = false) String value,
+                                                  Pageable limit) {
+    Page<ItemInfoDTO> pageItemInfoDTO = itemService.getItemInfoBySearch(key, value, limit);
+    return new PageDTO<>(pageItemInfoDTO.getContent(), limit, pageItemInfoDTO.getTotalElements());
+  }
+
   @GetMapping("/items/{itemId}")
   public ItemDTO get(@PathVariable("itemId") long itemId) {
     Item item = itemService.findOne(itemId);
     if (item == null) {
-      throw new NotFoundException("item not found for itemId " + itemId);
+      throw NotFoundException.itemNotFound(itemId);
     }
     return BeanUtils.transform(ItemDTO.class, item);
   }
@@ -230,10 +235,28 @@ public class ItemController {
       @PathVariable("namespaceName") String namespaceName, @PathVariable("key") String key) {
     Item item = itemService.findOne(appId, clusterName, namespaceName, key);
     if (item == null) {
-      throw new NotFoundException("item not found for %s %s %s %s", appId, clusterName,
-          namespaceName, key);
+      throw NotFoundException.itemNotFound(appId, clusterName, namespaceName, key);
     }
     return BeanUtils.transform(ItemDTO.class, item);
+  }
+
+  @GetMapping("/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/encodedItems/{key:.+}")
+  public ItemDTO getByEncodedKey(@PathVariable("appId") String appId,
+      @PathVariable("clusterName") String clusterName,
+      @PathVariable("namespaceName") String namespaceName, @PathVariable("key") String key) {
+    return this.get(appId, clusterName, namespaceName,
+        new String(Base64.getUrlDecoder().decode(key.getBytes(StandardCharsets.UTF_8))));
+  }
+
+  @GetMapping(value = "/apps/{appId}/clusters/{clusterName}/namespaces/{namespaceName}/items-with-page")
+  public PageDTO<ItemDTO> findItemsByNamespace(@PathVariable("appId") String appId,
+                                               @PathVariable("clusterName") String clusterName,
+                                               @PathVariable("namespaceName") String namespaceName,
+                                               Pageable pageable) {
+    Page<Item> itemPage = itemService.findItemsByNamespace(appId, clusterName, namespaceName, pageable);
+
+    List<ItemDTO> itemDTOS = BeanUtils.batchTransform(ItemDTO.class, itemPage.getContent());
+    return new PageDTO<>(itemDTOS, pageable, itemPage.getTotalElements());
   }
 
 }

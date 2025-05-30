@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ public class UserInfoControllerTest {
     Mockito.when(userPasswordChecker.checkWeakPassword(Mockito.anyString()))
         .thenReturn(new CheckResult(Boolean.TRUE, ""));
 
-    userInfoController.createOrUpdateUser(user);
+    userInfoController.createOrUpdateUser(true, user);
   }
 
   @Test(expected = BadRequestException.class)
@@ -63,7 +63,7 @@ public class UserInfoControllerTest {
         .thenReturn(new CheckResult(Boolean.FALSE, msg));
 
     try {
-      userInfoController.createOrUpdateUser(user);
+      userInfoController.createOrUpdateUser(true, user);
     } catch (BadRequestException e) {
       Assert.assertEquals(msg, e.getMessage());
       throw e;

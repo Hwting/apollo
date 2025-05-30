@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ public class ItemDTO extends BaseDTO{
   private long namespaceId;
 
   private String key;
+
+  private int type;
 
   private String value;
 
@@ -88,6 +90,14 @@ public class ItemDTO extends BaseDTO{
 
   public void setLineNum(int lineNum) {
     this.lineNum = lineNum;
+  }
+
+  public int getType() {
+    return type;
+  }
+
+  public void setType(int type) {
+    this.type = type;
   }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,11 @@ public class GrayReleaseRuleItemDTO {
   private String clientAppId;
   private Set<String> clientIpList;
   private Set<String> clientLabelList;
+
+  // this default constructor is for json deserialize use, to make sure all fields are initialized
+  public GrayReleaseRuleItemDTO() {
+    this("");
+  }
 
   public GrayReleaseRuleItemDTO(String clientAppId) {
     this(clientAppId, Sets.newHashSet(), Sets.newHashSet());

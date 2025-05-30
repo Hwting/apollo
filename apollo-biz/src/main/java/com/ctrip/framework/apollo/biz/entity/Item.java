@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,25 +27,28 @@ import javax.persistence.Lob;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "Item")
-@SQLDelete(sql = "Update Item set isDeleted = 1 where id = ?")
-@Where(clause = "isDeleted = 0")
+@Table(name = "`Item`")
+@SQLDelete(sql = "Update `Item` set IsDeleted = true, DeletedAt = ROUND(UNIX_TIMESTAMP(NOW(4))*1000) where Id = ?")
+@Where(clause = "`IsDeleted` = false")
 public class Item extends BaseEntity {
 
-  @Column(name = "NamespaceId", nullable = false)
+  @Column(name = "`NamespaceId`", nullable = false)
   private long namespaceId;
 
-  @Column(name = "key", nullable = false)
+  @Column(name = "`Key`", nullable = false)
   private String key;
 
-  @Column(name = "value")
+  @Column(name = "`Type`")
+  private int type;
+
+  @Column(name = "`Value`")
   @Lob
   private String value;
 
-  @Column(name = "comment")
+  @Column(name = "`Comment`")
   private String comment;
 
-  @Column(name = "LineNum")
+  @Column(name = "`LineNum`")
   private Integer lineNum;
 
   public String getComment() {
@@ -88,8 +91,18 @@ public class Item extends BaseEntity {
     this.lineNum = lineNum;
   }
 
+  public int getType() {
+    return type;
+  }
+
+  public void setType(int type) {
+    this.type = type;
+  }
+
+  @Override
   public String toString() {
-    return toStringHelper().add("namespaceId", namespaceId).add("key", key).add("value", value)
-        .add("lineNum", lineNum).add("comment", comment).toString();
+    return toStringHelper().add("namespaceId", namespaceId).add("key", key)
+            .add("type", type).add("value", value)
+            .add("lineNum", lineNum).add("comment", comment).toString();
   }
 }

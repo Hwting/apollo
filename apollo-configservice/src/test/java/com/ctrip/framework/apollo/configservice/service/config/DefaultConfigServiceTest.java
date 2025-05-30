@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * @author Jason Song(song_s@ctrip.com)
@@ -62,9 +61,7 @@ public class DefaultConfigServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    configService = new DefaultConfigService();
-    ReflectionTestUtils.setField(configService, "releaseService", releaseService);
-    ReflectionTestUtils.setField(configService, "grayReleaseRulesHolder", grayReleaseRulesHolder);
+    configService = new DefaultConfigService(releaseService, grayReleaseRulesHolder);
 
     someClientAppId = "1234";
     someConfigAppId = "1";

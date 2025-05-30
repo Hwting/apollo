@@ -15,6 +15,7 @@ Members include Project Management Committee members and committers. The list is
 | Anilople   | Xiaoquan Wang | Some Bank    |
 | JaredTan95 | Jared Tan     | DaoCloud     |
 | kezhenxu94 | Zhenxu Ke     | Tetrate      |
+| klboke     | Kailing Chen  | TapTap       |
 | lepdou     | Le Zhang      | Tencent      |
 | nobodyiam  | Jason Song    | Ant Group    |
 | zouyx      | Joe Zou       | Shein        |
@@ -32,6 +33,7 @@ Members include Project Management Committee members and committers. The list is
 | nisiyong    | Stephen Ni    | Qihoo 360    |
 | nobodyiam   | Jason Song    | Ant Group    |
 | pengweiqhca | Wei Peng      | Tuhu         |
+| Shoothzj    | ZhangJian He  | Huawei       |
 | vdisk-group | Lvqiu Ye      | Hundsun      |
 | zouyx       | Joe Zou       | Shein        |
 

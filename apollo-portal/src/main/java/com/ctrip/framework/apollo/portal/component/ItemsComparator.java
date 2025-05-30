@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,8 @@ public class ItemsComparator {
         copiedItem.setNamespaceId(baseNamespaceId);
         changeSets.addCreateItem(copiedItem);
       }else if (!Objects.equals(sourceItem.getValue(), item.getValue())){//update
-        //only value & comment can be update
+        //only type & value & comment can be update
+        sourceItem.setType(item.getType());
         sourceItem.setValue(item.getValue());
         sourceItem.setComment(item.getComment());
         changeSets.addUpdateItem(sourceItem);
@@ -90,6 +91,7 @@ public class ItemsComparator {
   private ItemDTO copyItem(ItemDTO sourceItem){
     ItemDTO copiedItem = new ItemDTO();
     copiedItem.setKey(sourceItem.getKey());
+    copiedItem.setType(sourceItem.getType());
     copiedItem.setValue(sourceItem.getValue());
     copiedItem.setComment(sourceItem.getComment());
     return copiedItem;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 package com.ctrip.framework.apollo.biz.service;
 
+import com.ctrip.framework.apollo.audit.annotation.ApolloAuditLog;
+import com.ctrip.framework.apollo.audit.annotation.OpType;
 import com.ctrip.framework.apollo.biz.entity.Audit;
 import com.ctrip.framework.apollo.biz.entity.Cluster;
 import com.ctrip.framework.apollo.biz.entity.Namespace;
@@ -72,7 +74,7 @@ public class AppNamespaceService {
   }
 
   public List<AppNamespace> findByAppId(String appId) {
-    return appNamespaceRepository.findByAppId(appId);
+    return appNamespaceRepository.findByAppIdOrderByIdAsc(appId);
   }
 
   public List<AppNamespace> findPublicNamespacesByNames(Set<String> namespaceNames) {
@@ -102,6 +104,7 @@ public class AppNamespaceService {
   }
 
   @Transactional
+  @ApolloAuditLog(type = OpType.CREATE, name = "AppNamespace.createDefault")
   public void createDefaultAppNamespace(String appId, String createBy) {
     if (!isAppNamespaceNameUnique(appId, ConfigConsts.NAMESPACE_APPLICATION)) {
       throw new ServiceException("appnamespace not unique");

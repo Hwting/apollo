@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,14 +54,14 @@ public class ClusterController {
     return this.clusterOpenApiService.getCluster(appId, env, clusterName);
   }
 
-  @PreAuthorize(value = "@consumerPermissionValidator.hasCreateClusterPermission(#request, #appId)")
+  @PreAuthorize(value = "@consumerPermissionValidator.hasCreateClusterPermission(#appId)")
   @PostMapping(value = "apps/{appId}/clusters")
   public OpenClusterDTO createCluster(@PathVariable String appId, @PathVariable String env,
-      @Valid @RequestBody OpenClusterDTO cluster, HttpServletRequest request) {
+      @Valid @RequestBody OpenClusterDTO cluster) {
 
     if (!Objects.equals(appId, cluster.getAppId())) {
-      throw new BadRequestException(String.format(
-          "AppId not equal. AppId in path = %s, AppId in payload = %s", appId, cluster.getAppId()));
+      throw new BadRequestException(
+          "AppId not equal. AppId in path = %s, AppId in payload = %s", appId, cluster.getAppId());
     }
 
     String clusterName = cluster.getName();
@@ -71,12 +71,11 @@ public class ClusterController {
         "name and dataChangeCreatedBy should not be null or empty");
 
     if (!InputValidator.isValidClusterNamespace(clusterName)) {
-      throw new BadRequestException(
-          String.format("Invalid ClusterName format: %s", InputValidator.INVALID_CLUSTER_NAMESPACE_MESSAGE));
+      throw BadRequestException.invalidClusterNameFormat(InputValidator.INVALID_CLUSTER_NAMESPACE_MESSAGE);
     }
 
     if (userService.findByUserId(operator) == null) {
-      throw new BadRequestException("User " + operator + " doesn't exist!");
+      throw BadRequestException.userNotExists(operator);
     }
 
     return this.clusterOpenApiService.createCluster(env, cluster);

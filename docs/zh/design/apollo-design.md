@@ -78,8 +78,8 @@ sequenceDiagram
 	Meta Server -->> Portal: Admin Service's instances(Multiple IP+Port)
 	loop until success
 		Portal ->> Portal: load balance choose a Admin Service instance
-		Portal ->> Config Service: request
-		Config Service -->> Portal: ack
+		Portal ->> Admin Service: request
+		Admin Service -->> Portal: ack
 	end
 ```
 
@@ -136,7 +136,7 @@ sequenceDiagram
 ### 1.3.2 Admin Service
 
 * 提供配置管理接口
-* 提供配置修改、发布等接口
+* 提供配置修改、发布、检索等接口
 * 接口服务对象为Portal
 
 ### 1.3.3 Meta Server
@@ -250,7 +250,7 @@ Admin Service在配置发布后，需要通知所有的Config Service有配置�
 
 实现方式如下：
 
-1. 客户端会发起一个Http请求到Config Service的`notifications/v2`接口，也就是[NotificationControllerV2](https://github.com/apolloconfig/apollo/blob/master/apollo-configservice/src/main/java/com/ctrip/framework/apollo/configservice/controller/NotificationControllerV2.java)，参见[RemoteConfigLongPollService](https://github.com/apolloconfig/apollo/blob/master/apollo-client/src/main/java/com/ctrip/framework/apollo/internals/RemoteConfigLongPollService.java)
+1. 客户端会发起一个Http请求到Config Service的`notifications/v2`接口，也就是[NotificationControllerV2](https://github.com/apolloconfig/apollo/blob/master/apollo-configservice/src/main/java/com/ctrip/framework/apollo/configservice/controller/NotificationControllerV2.java)，参见[RemoteConfigLongPollService](https://github.com/apolloconfig/apollo-java/blob/main/apollo-client/src/main/java/com/ctrip/framework/apollo/internals/RemoteConfigLongPollService.java)
 2. NotificationControllerV2不会立即返回结果，而是通过[Spring DeferredResult](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/web/context/request/async/DeferredResult.html)把请求挂起
 3. 如果在60秒内没有该客户端关心的配置发布，那么会返回Http状态码304给客户端
 4. 如果有该客户端关心的配置发布，NotificationControllerV2会调用DeferredResult的[setResult](http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/web/context/request/async/DeferredResult.html#setResult-T-)方法，传入有配置变化的namespace信息，同时该请求会立即返回。客户端从返回的结果中获取到配置变化的namespace后，会立即请求Config Service获取该namespace的最新配置。
@@ -298,7 +298,7 @@ Spring从3.1版本开始增加了`ConfigurableEnvironment`和`PropertySource`：
 
 ![Overview](https://cdn.jsdelivr.net/gh/apolloconfig/apollo@master/doc/images/environment-remote-source.png)
 
-相关代码可以参考[PropertySourcesProcessor](https://github.com/apolloconfig/apollo/blob/master/apollo-client/src/main/java/com/ctrip/framework/apollo/spring/config/PropertySourcesProcessor.java)
+相关代码可以参考[PropertySourcesProcessor](https://github.com/apolloconfig/apollo-java/blob/main/apollo-client/src/main/java/com/ctrip/framework/apollo/spring/config/PropertySourcesProcessor.java)
 
 # 四、可用性考虑
 
@@ -321,7 +321,7 @@ Spring从3.1版本开始增加了`ConfigurableEnvironment`和`PropertySource`：
 <tr>
 <td>所有Config Service下线</td>
 <td>客户端无法读取最新配置，Portal无影响</td>
-<td>客户端重启时，可以读取本地缓存配置文件。如果是新扩容的机器，可以从其它机器上获取已缓存的配置文件，具体信息可以参考<a href='/#/zh/usage/java-sdk-user-guide?id=_123-本地缓存路径'>Java客户端使用指南 - 1.2.3 本地缓存路径</a>
+<td>客户端重启时，可以读取本地缓存配置文件。如果是新扩容的机器，可以从其它机器上获取已缓存的配置文件，具体信息可以参考<a href='/#/zh/client/java-sdk-user-guide?id=_123-本地缓存路径'>Java客户端使用指南 - 1.2.3 本地缓存路径</a>
 </td>
 <td></td>
 </tr>

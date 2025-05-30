@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,18 @@
  */
 package com.ctrip.framework.apollo.openapi.v1.controller;
 
+import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.openapi.api.AppOpenApiService;
+import com.ctrip.framework.apollo.openapi.dto.OpenCreateAppDTO;
 import com.ctrip.framework.apollo.openapi.service.ConsumerService;
 import com.ctrip.framework.apollo.openapi.util.ConsumerAuthUtil;
 import com.ctrip.framework.apollo.openapi.dto.OpenAppDTO;
 import com.ctrip.framework.apollo.openapi.dto.OpenEnvClusterDTO;
+import com.ctrip.framework.apollo.portal.entity.model.AppModel;
 import java.util.Arrays;
 import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
+import javax.transaction.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +51,30 @@ public class AppController {
     this.appOpenApiService = appOpenApiService;
   }
 
+  /**
+   * @see com.ctrip.framework.apollo.portal.controller.AppController#create(AppModel)
+   */
+  @Transactional
+  @PreAuthorize(value = "@consumerPermissionValidator.hasCreateApplicationPermission()")
+  @PostMapping(value = "/apps")
+  public void createApp(
+      @RequestBody OpenCreateAppDTO req
+  ) {
+    if (null == req.getApp()) {
+      throw new BadRequestException("App is null");
+    }
+    final OpenAppDTO app = req.getApp();
+    if (null == app.getAppId()) {
+      throw new BadRequestException("AppId is null");
+    }
+    // create app
+    this.appOpenApiService.createApp(req);
+    if (req.isAssignAppRoleToSelf()) {
+      long consumerId = this.consumerAuthUtil.retrieveConsumerIdFromCtx();
+      consumerService.assignAppRoleToConsumer(consumerId, app.getAppId());
+    }
+  }
+
   @GetMapping(value = "/apps/{appId}/envclusters")
   public List<OpenEnvClusterDTO> getEnvClusterInfo(@PathVariable String appId){
     return this.appOpenApiService.getEnvClusterInfo(appId);
@@ -65,8 +93,8 @@ public class AppController {
    * @return which apps can be operated by open api
    */
   @GetMapping("/apps/authorized")
-  public List<OpenAppDTO> findAppsAuthorized(HttpServletRequest request) {
-    long consumerId = this.consumerAuthUtil.retrieveConsumerId(request);
+  public List<OpenAppDTO> findAppsAuthorized() {
+    long consumerId = this.consumerAuthUtil.retrieveConsumerIdFromCtx();
 
     Set<String> appIds = this.consumerService.findAppIdsAuthorizedByConsumerId(consumerId);
 

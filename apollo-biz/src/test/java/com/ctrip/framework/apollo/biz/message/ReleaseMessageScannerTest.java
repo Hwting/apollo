@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import org.awaitility.Awaitility;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.concurrent.TimeUnit;
 
@@ -52,10 +51,7 @@ public class ReleaseMessageScannerTest extends AbstractUnitTest {
 
   @Before
   public void setUp() throws Exception {
-    releaseMessageScanner = new ReleaseMessageScanner();
-    ReflectionTestUtils
-        .setField(releaseMessageScanner, "releaseMessageRepository", releaseMessageRepository);
-    ReflectionTestUtils.setField(releaseMessageScanner, "bizConfig", bizConfig);
+    releaseMessageScanner = new ReleaseMessageScanner(bizConfig, releaseMessageRepository);
     databaseScanInterval = 100; //100 ms
     when(bizConfig.releaseMessageScanIntervalInMilli()).thenReturn(databaseScanInterval);
     releaseMessageScanner.afterPropertiesSet();

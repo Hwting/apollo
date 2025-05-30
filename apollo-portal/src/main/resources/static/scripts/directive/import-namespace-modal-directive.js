@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ function importNamespaceModalDirective($window, $q, $translate, $http, toastr, A
                 form.append('file', file);
                 $http({
                           method: 'POST',
-                          url: '/apps/' + toImportNamespace.baseInfo.appId + '/envs/' + scope.env + '/clusters/'
+                          url: AppUtil.prefixPath() + '/apps/' + toImportNamespace.baseInfo.appId + '/envs/' + scope.env + '/clusters/'
                                + toImportNamespace.baseInfo.clusterName
                                + '/namespaces/' + toImportNamespace.baseInfo.namespaceName + "/items/import",
                           data: form,

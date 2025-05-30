@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.ctrip.framework.apollo.portal.spi.oidc;
 import com.ctrip.framework.apollo.portal.entity.bo.UserInfo;
 import com.ctrip.framework.apollo.portal.spi.UserInfoHolder;
 import com.ctrip.framework.apollo.portal.spi.UserService;
+import com.ctrip.framework.apollo.portal.spi.configuration.OidcExtendProperties;
 import java.security.Principal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +39,11 @@ public class OidcUserInfoHolder implements UserInfoHolder {
 
   private final UserService userService;
 
-  public OidcUserInfoHolder(UserService userService) {
+  private final OidcExtendProperties oidcExtendProperties;
+
+  public OidcUserInfoHolder(UserService userService, OidcExtendProperties oidcExtendProperties) {
     this.userService = userService;
+    this.oidcExtendProperties = oidcExtendProperties;
   }
 
   @Override
@@ -61,7 +65,8 @@ public class OidcUserInfoHolder implements UserInfoHolder {
       UserInfo userInfo = new UserInfo();
       OidcUser oidcUser = (OidcUser) principal;
       userInfo.setUserId(oidcUser.getSubject());
-      userInfo.setName(oidcUser.getPreferredUsername());
+      userInfo.setName(
+          OidcUserInfoUtil.getOidcUserDisplayName(oidcUser, this.oidcExtendProperties));
       userInfo.setEmail(oidcUser.getEmail());
       return userInfo;
     }
@@ -69,6 +74,7 @@ public class OidcUserInfoHolder implements UserInfoHolder {
       Jwt jwt = (Jwt) principal;
       UserInfo userInfo = new UserInfo();
       userInfo.setUserId(jwt.getSubject());
+      userInfo.setName(OidcUserInfoUtil.getJwtUserDisplayName(jwt, this.oidcExtendProperties));
       return userInfo;
     }
     log.debug("principal is neither oidcUser nor jwt, principal=[{}]", principal);

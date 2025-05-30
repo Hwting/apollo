@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,14 @@ import com.ctrip.framework.apollo.common.entity.App;
 import com.ctrip.framework.apollo.common.entity.AppNamespace;
 import com.ctrip.framework.apollo.core.enums.ConfigFileFormat;
 import com.ctrip.framework.apollo.portal.AbstractUnitTest;
-import com.ctrip.framework.apollo.portal.component.PermissionValidator;
+import com.ctrip.framework.apollo.portal.component.UserPermissionValidator;
 import com.ctrip.framework.apollo.portal.entity.bo.ItemBO;
 import com.ctrip.framework.apollo.portal.entity.bo.NamespaceBO;
 import com.ctrip.framework.apollo.portal.entity.bo.UserInfo;
 import com.ctrip.framework.apollo.portal.environment.Env;
 import com.ctrip.framework.apollo.portal.spi.UserInfoHolder;
 
+import org.assertj.core.util.Files;
 import org.assertj.core.util.Lists;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -64,7 +65,7 @@ public class ConfigsExportServiceTest extends AbstractUnitTest {
   @Mock
   private NamespaceService          namespaceService;
   @Mock
-  private PermissionValidator       permissionValidator;
+  private UserPermissionValidator userPermissionValidator;
   @Mock
   private UserInfoHolder            userInfoHolder;
   @Mock
@@ -82,11 +83,21 @@ public class ConfigsExportServiceTest extends AbstractUnitTest {
 
   @Test
   public void testNamespaceExportImport() throws FileNotFoundException {
-    String filePath = "/tmp/apollo.zip";
-    File file = new File(filePath);
-    if (file.exists()) {
-      file.delete();
-    }
+    // Test with fillItemDetail = true
+    testExportImportScenario(true);
+  }
+
+  @Test
+  public void testNamespaceExportImportWithFillItemDetail() throws FileNotFoundException {
+    // Test with fillItemDetail = false
+    testExportImportScenario(false);
+  }
+
+  private void testExportImportScenario(boolean fillItemDetail) throws FileNotFoundException {
+
+    File temporaryFolder = Files.newTemporaryFolder();
+    temporaryFolder.deleteOnExit();
+    String filePath = temporaryFolder + File.separator + "export.zip";
 
     //export config
     UserInfo userInfo = genUser();
@@ -144,15 +155,15 @@ public class ConfigsExportServiceTest extends AbstractUnitTest {
 
     when(appService.findAll()).thenReturn(exportApps);
     when(appNamespaceService.findAll()).thenReturn(appNamespaces);
-    when(permissionValidator.isAppAdmin(any())).thenReturn(true);
+    when(userPermissionValidator.isAppAdmin(any())).thenReturn(true);
     when(clusterService.findClusters(env, appId1)).thenReturn(app1Clusters);
     when(clusterService.findClusters(env, appId2)).thenReturn(app2Clusters);
-    when(namespaceService.findNamespaceBOs(appId1, Env.DEV, clusterName1)).thenReturn(app1Cluster1Namespace);
-    when(namespaceService.findNamespaceBOs(appId1, Env.DEV, clusterName2)).thenReturn(app1Cluster2Namespace);
-    when(namespaceService.findNamespaceBOs(appId2, Env.DEV, clusterName1)).thenReturn(app2Cluster1Namespace);
-    when(namespaceService.findNamespaceBOs(appId2, Env.DEV, clusterName2)).thenReturn(app2Cluster2Namespace);
+    when(namespaceService.findNamespaceBOs(appId1, Env.DEV, clusterName1, fillItemDetail, false)).thenReturn(app1Cluster1Namespace);
+    when(namespaceService.findNamespaceBOs(appId1, Env.DEV, clusterName2, fillItemDetail, false)).thenReturn(app1Cluster2Namespace);
+    when(namespaceService.findNamespaceBOs(appId2, Env.DEV, clusterName1, fillItemDetail, false)).thenReturn(app2Cluster1Namespace);
+    when(namespaceService.findNamespaceBOs(appId2, Env.DEV, clusterName2, fillItemDetail, false)).thenReturn(app2Cluster2Namespace);
 
-    FileOutputStream fileOutputStream = new FileOutputStream("/tmp/apollo.zip");
+    FileOutputStream fileOutputStream = new FileOutputStream(filePath);
 
     configsExportService.exportData(fileOutputStream, Lists.newArrayList(Env.DEV));
 
@@ -171,7 +182,7 @@ public class ConfigsExportServiceTest extends AbstractUnitTest {
     HttpStatusCodeException itemNotFoundException = new HttpClientErrorException(HttpStatus.NOT_FOUND);
     when(itemService.loadItem(any(), any(), any(), any(), anyString())).thenThrow(itemNotFoundException);
 
-    FileInputStream fileInputStream = new FileInputStream("/tmp/apollo.zip");
+    FileInputStream fileInputStream = new FileInputStream(filePath);
     ZipInputStream zipInputStream = new ZipInputStream(fileInputStream);
 
     try {
@@ -187,10 +198,12 @@ public class ConfigsExportServiceTest extends AbstractUnitTest {
 
     verify(clusterService, times(4)).createCluster(any(), any());
 
-    verify(namespaceService, times(6)).createNamespace(any(), any());
-    verify(roleInitializationService,times(6)).initNamespaceRoles(any(), any(), anyString());
-    verify(roleInitializationService,times(6)).initNamespaceEnvRoles(any(), any(), anyString());
-    verify(itemService, times(12)).createItem(any(), any(), any(), any(), any());
+    if(fillItemDetail){
+      verify(namespaceService, times(6)).createNamespace(any(), any());
+      verify(roleInitializationService,times(6)).initNamespaceRoles(any(), any(), anyString());
+      verify(roleInitializationService,times(6)).initNamespaceEnvRoles(any(), any(), anyString());
+      verify(itemService, times(12)).createItem(any(), any(), any(), any(), any());
+    }
   }
 
   private App genApp(String name, String appId, String orgId, String orgName) {

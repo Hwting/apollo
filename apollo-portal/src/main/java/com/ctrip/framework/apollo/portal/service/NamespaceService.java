@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.ctrip.framework.apollo.portal.service;
 
 import com.ctrip.framework.apollo.common.constants.GsonType;
+import com.ctrip.framework.apollo.common.dto.ClusterDTO;
 import com.ctrip.framework.apollo.common.dto.ItemDTO;
 import com.ctrip.framework.apollo.common.dto.NamespaceDTO;
 import com.ctrip.framework.apollo.common.dto.PageDTO;
@@ -25,8 +26,10 @@ import com.ctrip.framework.apollo.common.entity.AppNamespace;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.common.utils.BeanUtils;
 import com.ctrip.framework.apollo.core.enums.ConfigFileFormat;
+import com.ctrip.framework.apollo.core.utils.ApolloThreadFactory;
 import com.ctrip.framework.apollo.core.utils.StringUtils;
 import com.ctrip.framework.apollo.portal.api.AdminServiceAPI;
+import com.ctrip.framework.apollo.portal.api.AdminServiceAPI.NamespaceAPI;
 import com.ctrip.framework.apollo.portal.component.PortalSettings;
 import com.ctrip.framework.apollo.portal.component.config.PortalConfig;
 import com.ctrip.framework.apollo.portal.constant.RoleType;
@@ -34,6 +37,7 @@ import com.ctrip.framework.apollo.portal.constant.TracerEventType;
 import com.ctrip.framework.apollo.portal.enricher.adapter.BaseDtoUserInfoEnrichedAdapter;
 import com.ctrip.framework.apollo.portal.entity.bo.ItemBO;
 import com.ctrip.framework.apollo.portal.entity.bo.NamespaceBO;
+import com.ctrip.framework.apollo.portal.entity.vo.NamespaceUsage;
 import com.ctrip.framework.apollo.portal.environment.Env;
 import com.ctrip.framework.apollo.portal.spi.UserInfoHolder;
 import com.ctrip.framework.apollo.portal.util.RoleUtils;
@@ -41,11 +45,18 @@ import com.ctrip.framework.apollo.tracer.Tracer;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -58,6 +69,9 @@ public class NamespaceService {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(NamespaceService.class);
   private static final Gson GSON = new Gson();
+  private static final ExecutorService executorService = Executors.newFixedThreadPool(
+      Runtime.getRuntime().availableProcessors() * 2
+      , ApolloThreadFactory.create("NamespaceService", true));
 
   private final PortalConfig portalConfig;
   private final PortalSettings portalSettings;
@@ -70,19 +84,21 @@ public class NamespaceService {
   private final NamespaceBranchService branchService;
   private final RolePermissionService rolePermissionService;
   private final AdditionalUserInfoEnrichService additionalUserInfoEnrichService;
+  private final ClusterService clusterService;
 
   public NamespaceService(
       final PortalConfig portalConfig,
       final PortalSettings portalSettings,
       final UserInfoHolder userInfoHolder,
-      final AdminServiceAPI.NamespaceAPI namespaceAPI,
+      final NamespaceAPI namespaceAPI,
       final ItemService itemService,
       final ReleaseService releaseService,
       final AppNamespaceService appNamespaceService,
       final InstanceService instanceService,
       final @Lazy NamespaceBranchService branchService,
       final RolePermissionService rolePermissionService,
-      final AdditionalUserInfoEnrichService additionalUserInfoEnrichService) {
+      final AdditionalUserInfoEnrichService additionalUserInfoEnrichService,
+      ClusterService clusterService) {
     this.portalConfig = portalConfig;
     this.portalSettings = portalSettings;
     this.userInfoHolder = userInfoHolder;
@@ -94,6 +110,7 @@ public class NamespaceService {
     this.branchService = branchService;
     this.rolePermissionService = rolePermissionService;
     this.additionalUserInfoEnrichService = additionalUserInfoEnrichService;
+    this.clusterService = clusterService;
   }
 
 
@@ -114,35 +131,46 @@ public class NamespaceService {
   }
 
 
+  public List<NamespaceUsage> getNamespaceUsageByAppId(String appId, String namespaceName) {
+    List<Env> envs = portalSettings.getActiveEnvs();
+    AppNamespace appNamespace = appNamespaceService.findByAppIdAndName(appId, namespaceName);
+    List<NamespaceUsage> usages = new ArrayList<>();
+    for (Env env : envs) {
+      List<ClusterDTO> clusters = clusterService.findClusters(env, appId);
+      for (ClusterDTO cluster : clusters) {
+        String clusterName = cluster.getName();
+        NamespaceUsage usage = this.getNamespaceUsageByEnv(appId, namespaceName, env, clusterName);
+        if (appNamespace != null && appNamespace.isPublic()) {
+          int associatedNamespace = this.getPublicAppNamespaceHasAssociatedNamespace(namespaceName, env);
+          usage.setLinkedNamespaceCount(associatedNamespace);
+        }
+
+        if(usage.getLinkedNamespaceCount() > 0 || usage.getBranchInstanceCount() > 0 || usage.getInstanceCount() > 0) {
+          usages.add(usage);
+        }
+      }
+    }
+    return usages;
+  }
+
+  public NamespaceUsage getNamespaceUsageByEnv(String appId, String namespaceName, Env env, String clusterName) {
+    NamespaceUsage namespaceUsage = new NamespaceUsage(namespaceName, appId, clusterName, env.getName());
+    int instanceCount = instanceService.getInstanceCountByNamespace(appId, env, clusterName, namespaceName);
+    namespaceUsage.setInstanceCount(instanceCount);
+
+    NamespaceDTO branchNamespace = branchService.findBranchBaseInfo(appId, env, clusterName, namespaceName);
+    if(branchNamespace != null){
+      String branchClusterName = branchNamespace.getClusterName();
+      int branchInstanceCount = instanceService.getInstanceCountByNamespace(appId, env, branchClusterName, namespaceName);
+      namespaceUsage.setBranchInstanceCount(branchInstanceCount);
+    }
+    return namespaceUsage;
+  }
+
   @Transactional
   public void deleteNamespace(String appId, Env env, String clusterName, String namespaceName) {
 
-    AppNamespace appNamespace = appNamespaceService.findByAppIdAndName(appId, namespaceName);
-
-    //1. check parent namespace has not instances
-    if (namespaceHasInstances(appId, env, clusterName, namespaceName)) {
-      throw new BadRequestException(
-          "Can not delete namespace because namespace has active instances");
-    }
-
-    //2. check child namespace has not instances
-    NamespaceDTO childNamespace = branchService
-        .findBranchBaseInfo(appId, env, clusterName, namespaceName);
-    if (childNamespace != null &&
-        namespaceHasInstances(appId, env, childNamespace.getClusterName(), namespaceName)) {
-      throw new BadRequestException(
-          "Can not delete namespace because namespace's branch has active instances");
-    }
-
-    //3. check public namespace has not associated namespace
-    if (appNamespace != null && appNamespace.isPublic() && publicAppNamespaceHasAssociatedNamespace(
-        namespaceName, env)) {
-      throw new BadRequestException(
-          "Can not delete public namespace which has associated namespaces");
-    }
-
     String operator = userInfoHolder.getUser().getUserId();
-
     namespaceAPI.deleteNamespace(env, appId, clusterName, namespaceName, operator);
   }
 
@@ -150,7 +178,7 @@ public class NamespaceService {
       String namespaceName) {
     NamespaceDTO namespace = namespaceAPI.loadNamespace(appId, env, clusterName, namespaceName);
     if (namespace == null) {
-      throw new BadRequestException(String.format("Namespace: %s not exist.", namespaceName));
+      throw BadRequestException.namespaceNotExists(appId, clusterName, namespaceName);
     }
     return namespace;
   }
@@ -158,28 +186,50 @@ public class NamespaceService {
   /**
    * load cluster all namespace info with items
    */
-  public List<NamespaceBO> findNamespaceBOs(String appId, Env env, String clusterName) {
+  public List<NamespaceBO> findNamespaceBOs(String appId, Env env, String clusterName, boolean fillItemDetail, boolean includeDeletedItems) {
 
     List<NamespaceDTO> namespaces = namespaceAPI.findNamespaceByCluster(appId, env, clusterName);
     if (namespaces == null || namespaces.size() == 0) {
-      throw new BadRequestException("namespaces not exist");
+      throw BadRequestException.namespaceNotExists();
     }
 
-    List<NamespaceBO> namespaceBOs = new LinkedList<>();
+    List<NamespaceBO> namespaceBOs = Collections.synchronizedList(new LinkedList<>());
+    List<String> exceptionNamespaces = Collections.synchronizedList(new LinkedList<>());
+    CountDownLatch latch = new CountDownLatch(namespaces.size());
     for (NamespaceDTO namespace : namespaces) {
+      executorService.submit(() -> {
+        NamespaceBO namespaceBO;
+        try {
+          namespaceBO = transformNamespace2BO(env, namespace, fillItemDetail, includeDeletedItems);
+          namespaceBOs.add(namespaceBO);
+        } catch (Exception e) {
+          LOGGER.error("parse namespace error. app id:{}, env:{}, clusterName:{}, namespace:{}",
+              appId, env, clusterName, namespace.getNamespaceName(), e);
+          exceptionNamespaces.add(namespace.getNamespaceName());
+        } finally {
+          latch.countDown();
+        }
+      });
 
-      NamespaceBO namespaceBO;
-      try {
-        namespaceBO = transformNamespace2BO(env, namespace);
-        namespaceBOs.add(namespaceBO);
-      } catch (Exception e) {
-        LOGGER.error("parse namespace error. app id:{}, env:{}, clusterName:{}, namespace:{}",
-            appId, env, clusterName, namespace.getNamespaceName(), e);
-        throw e;
-      }
+    }
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      //ignore
     }
 
-    return namespaceBOs;
+    if(namespaceBOs.size() != namespaces.size()){
+       throw new RuntimeException(String
+           .format("Parse namespaces error, expected: %s, but actual: %s, cannot get those namespaces: %s", namespaces.size(), namespaceBOs.size(), exceptionNamespaces));
+    }
+
+    return namespaceBOs.stream()
+        .sorted(Comparator.comparing(o -> o.getBaseInfo().getId()))
+        .collect(Collectors.toList());
+  }
+
+  public List<NamespaceBO> findNamespaceBOs(String appId, Env env, String clusterName) {
+    return findNamespaceBOs(appId, env, clusterName, true, true);
   }
 
   public List<NamespaceDTO> findNamespaces(String appId, Env env, String clusterName) {
@@ -200,21 +250,25 @@ public class NamespaceService {
   }
 
   public NamespaceBO loadNamespaceBO(String appId, Env env, String clusterName,
-      String namespaceName) {
+      String namespaceName, boolean fillItemDetail, boolean includeDeletedItems) {
     NamespaceDTO namespace = namespaceAPI.loadNamespace(appId, env, clusterName, namespaceName);
     if (namespace == null) {
-      throw new BadRequestException("namespaces not exist");
+      throw BadRequestException.namespaceNotExists(appId, clusterName, namespaceName);
     }
-    return transformNamespace2BO(env, namespace);
+    return transformNamespace2BO(env, namespace, fillItemDetail, includeDeletedItems);
   }
 
-  public boolean namespaceHasInstances(String appId, Env env, String clusterName,
+  public NamespaceBO loadNamespaceBO(String appId, Env env, String clusterName,
       String namespaceName) {
-    return instanceService.getInstanceCountByNamespace(appId, env, clusterName, namespaceName) > 0;
+    return loadNamespaceBO(appId, env, clusterName, namespaceName, true, true);
   }
 
   public boolean publicAppNamespaceHasAssociatedNamespace(String publicNamespaceName, Env env) {
-    return namespaceAPI.countPublicAppNamespaceAssociatedNamespaces(env, publicNamespaceName) > 0;
+    return getPublicAppNamespaceHasAssociatedNamespace(publicNamespaceName, env) > 0;
+  }
+
+  public int getPublicAppNamespaceHasAssociatedNamespace(String publicNamespaceName, Env env) {
+    return namespaceAPI.countPublicAppNamespaceAssociatedNamespaces(env, publicNamespaceName);
   }
 
   public NamespaceBO findPublicNamespaceForAssociatedNamespace(Env env, String appId,
@@ -239,7 +293,7 @@ public class NamespaceService {
     return result;
   }
 
-  private NamespaceBO transformNamespace2BO(Env env, NamespaceDTO namespace) {
+  private NamespaceBO transformNamespace2BO(Env env, NamespaceDTO namespace, boolean fillItemDetail, boolean includeDeletedItems) {
     NamespaceBO namespaceBO = new NamespaceBO();
     namespaceBO.setBaseInfo(namespace);
 
@@ -252,10 +306,13 @@ public class NamespaceService {
     List<ItemBO> itemBOs = new LinkedList<>();
     namespaceBO.setItems(itemBOs);
 
+    if (!fillItemDetail) {
+      return namespaceBO;
+    }
+
     //latest Release
     ReleaseDTO latestRelease;
     Map<String, String> releaseItems = new HashMap<>();
-    Map<String, ItemDTO> deletedItemDTOs = new HashMap<>();
     latestRelease = releaseService.loadLatestRelease(appId, env, clusterName, namespaceName);
     if (latestRelease != null) {
       releaseItems = GSON.fromJson(latestRelease.getConfigurations(), GsonType.CONFIG);
@@ -277,18 +334,24 @@ public class NamespaceService {
       itemBOs.add(itemBO);
     }
 
-    //deleted items
-    itemService.findDeletedItems(appId, env, clusterName, namespaceName).forEach(item -> {
-      deletedItemDTOs.put(item.getKey(),item);
-    });
+    if (includeDeletedItems) {
+      //deleted items
+      Map<String, ItemDTO> deletedItemDTOs = itemService.findDeletedItems(appId, env, clusterName, namespaceName).stream()
+              .filter(itemDTO -> !StringUtils.isEmpty(itemDTO.getKey()))
+              .collect(Collectors.toMap(itemDTO -> itemDTO.getKey(), v -> v, (v1, v2) -> v2));
 
-    List<ItemBO> deletedItems = parseDeletedItems(items, releaseItems, deletedItemDTOs);
-    itemBOs.addAll(deletedItems);
-    modifiedItemCnt += deletedItems.size();
+      List<ItemBO> deletedItems = parseDeletedItems(items, releaseItems, deletedItemDTOs);
+      itemBOs.addAll(deletedItems);
+      modifiedItemCnt += deletedItems.size();
+    }
 
     namespaceBO.setItemModifiedCnt(modifiedItemCnt);
 
     return namespaceBO;
+  }
+
+  private NamespaceBO transformNamespace2BO(Env env, NamespaceDTO namespace) {
+    return transformNamespace2BO(env, namespace, true, true);
   }
 
   private void fillAppNamespaceProperties(NamespaceBO namespace) {
@@ -325,6 +388,8 @@ public class NamespaceService {
 
   private List<ItemBO> parseDeletedItems(List<ItemDTO> newItems, Map<String, String> releaseItems, Map<String, ItemDTO> deletedItemDTOs) {
     Map<String, ItemDTO> newItemMap = BeanUtils.mapByKey("key", newItems);
+    //remove comment and blank item map.
+    newItemMap.remove("");
 
     List<ItemBO> deletedItems = new LinkedList<>();
     for (Map.Entry<String, String> entry : releaseItems.entrySet()) {

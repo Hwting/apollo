@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,13 +40,14 @@ public interface PermissionRepository extends PagingAndSortingRepository<Permiss
   List<Permission> findByPermissionTypeInAndTargetId(Collection<String> permissionTypes,
                                                      String targetId);
 
-  @Query("SELECT p.id from Permission p where p.targetId = ?1 or p.targetId like CONCAT(?1, '+%')")
+  @Query("SELECT p.id from Permission p where p.targetId like ?1 or p.targetId like CONCAT(?1, '+%')")
   List<Long> findPermissionIdsByAppId(String appId);
 
-  @Query("SELECT p.id from Permission p where p.targetId = CONCAT(?1, '+', ?2)")
+  @Query("SELECT p.id from Permission p where p.targetId like CONCAT(?1, '+', ?2) "
+      + "OR p.targetId like CONCAT(?1, '+', ?2, '+%')")
   List<Long> findPermissionIdsByAppIdAndNamespace(String appId, String namespaceName);
 
   @Modifying
-  @Query("UPDATE Permission SET IsDeleted=1, DataChange_LastModifiedBy = ?2 WHERE Id in ?1")
+  @Query("UPDATE Permission SET IsDeleted = true, DeletedAt = ROUND(UNIX_TIMESTAMP(NOW(4))*1000), DataChange_LastModifiedBy = ?2 WHERE Id in ?1 and IsDeleted = false")
   Integer batchDelete(List<Long> permissionIds, String operator);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import com.ctrip.framework.apollo.common.entity.AppNamespace;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.common.exception.ServiceException;
 import com.ctrip.framework.apollo.core.enums.ConfigFileFormat;
-import com.ctrip.framework.apollo.portal.component.PermissionValidator;
+import com.ctrip.framework.apollo.portal.component.UserPermissionValidator;
 import com.ctrip.framework.apollo.portal.component.PortalSettings;
 import com.ctrip.framework.apollo.portal.entity.bo.ConfigBO;
 import com.ctrip.framework.apollo.portal.entity.bo.NamespaceBO;
@@ -66,7 +66,7 @@ public class ConfigsExportService {
 
   private final PortalSettings portalSettings;
 
-  private final PermissionValidator permissionValidator;
+  private final UserPermissionValidator userPermissionValidator;
 
   public ConfigsExportService(
       AppService appService,
@@ -74,13 +74,13 @@ public class ConfigsExportService {
       final @Lazy NamespaceService namespaceService,
       final AppNamespaceService appNamespaceService,
       PortalSettings portalSettings,
-      PermissionValidator permissionValidator) {
+      UserPermissionValidator userPermissionValidator) {
     this.appService = appService;
     this.clusterService = clusterService;
     this.namespaceService = namespaceService;
     this.appNamespaceService = appNamespaceService;
     this.portalSettings = portalSettings;
-    this.permissionValidator = permissionValidator;
+    this.userPermissionValidator = userPermissionValidator;
   }
 
   /**
@@ -144,7 +144,7 @@ public class ConfigsExportService {
     final Predicate<App> isAppAdmin =
         app -> {
           try {
-            return permissionValidator.isAppAdmin(app.getAppId());
+            return userPermissionValidator.isAppAdmin(app.getAppId());
           } catch (Exception e) {
             logger.error("permission check failed. app = {}", app);
             return false;
@@ -235,7 +235,7 @@ public class ConfigsExportService {
                                 ZipOutputStream zipOutputStream) {
     String clusterName = exportCluster.getName();
 
-    List<NamespaceBO> namespaceBOS = namespaceService.findNamespaceBOs(exportApp.getAppId(), env, clusterName);
+    List<NamespaceBO> namespaceBOS = namespaceService.findNamespaceBOs(exportApp.getAppId(), env, clusterName, true, false);
 
     if (CollectionUtils.isEmpty(namespaceBOS)) {
       return;

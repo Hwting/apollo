@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,14 @@ import org.springframework.util.CollectionUtils;
  * Default discovery service for Eureka
  */
 @Service
-@ConditionalOnMissingProfile({"kubernetes", "nacos-discovery", "consul-discovery", "zookeeper-discovery"})
+@ConditionalOnMissingProfile({
+    "kubernetes",
+    "nacos-discovery",
+    "consul-discovery",
+    "zookeeper-discovery",
+    "custom-defined-discovery",
+    "database-discovery",
+})
 public class DefaultDiscoveryService implements DiscoveryService {
 
   private final EurekaClient eurekaClient;

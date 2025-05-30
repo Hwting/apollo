@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.ctrip.framework.apollo.common.dto.ReleaseDTO;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.common.exception.NotFoundException;
 import com.ctrip.framework.apollo.portal.environment.Env;
-import com.ctrip.framework.apollo.portal.component.PermissionValidator;
+import com.ctrip.framework.apollo.portal.component.UserPermissionValidator;
 import com.ctrip.framework.apollo.portal.component.config.PortalConfig;
 import com.ctrip.framework.apollo.portal.entity.bo.ReleaseBO;
 import com.ctrip.framework.apollo.portal.entity.model.NamespaceReleaseModel;
@@ -53,23 +53,23 @@ public class ReleaseController {
   private final ReleaseService releaseService;
   private final ApplicationEventPublisher publisher;
   private final PortalConfig portalConfig;
-  private final PermissionValidator permissionValidator;
+  private final UserPermissionValidator userPermissionValidator;
   private final UserInfoHolder userInfoHolder;
 
   public ReleaseController(
       final ReleaseService releaseService,
       final ApplicationEventPublisher publisher,
       final PortalConfig portalConfig,
-      final PermissionValidator permissionValidator,
+      final UserPermissionValidator userPermissionValidator,
       final UserInfoHolder userInfoHolder) {
     this.releaseService = releaseService;
     this.publisher = publisher;
     this.portalConfig = portalConfig;
-    this.permissionValidator = permissionValidator;
+    this.userPermissionValidator = userPermissionValidator;
     this.userInfoHolder = userInfoHolder;
   }
 
-  @PreAuthorize(value = "@permissionValidator.hasReleaseNamespacePermission(#appId, #namespaceName, #env)")
+  @PreAuthorize(value = "@userPermissionValidator.hasReleaseNamespacePermission(#appId, #env, #clusterName, #namespaceName)")
   @PostMapping(value = "/apps/{appId}/envs/{env}/clusters/{clusterName}/namespaces/{namespaceName}/releases")
   public ReleaseDTO createRelease(@PathVariable String appId,
                                   @PathVariable String env, @PathVariable String clusterName,
@@ -80,7 +80,7 @@ public class ReleaseController {
     model.setNamespaceName(namespaceName);
 
     if (model.isEmergencyPublish() && !portalConfig.isEmergencyPublishAllowed(Env.valueOf(env))) {
-      throw new BadRequestException(String.format("Env: %s is not supported emergency publish now", env));
+      throw new BadRequestException("Env: %s is not supported emergency publish now", env);
     }
 
     ReleaseDTO createdRelease = releaseService.publish(model);
@@ -98,7 +98,7 @@ public class ReleaseController {
     return createdRelease;
   }
 
-  @PreAuthorize(value = "@permissionValidator.hasReleaseNamespacePermission(#appId, #namespaceName, #env)")
+  @PreAuthorize(value = "@userPermissionValidator.hasReleaseNamespacePermission(#appId, #env, #clusterName, #namespaceName)")
   @PostMapping(value = "/apps/{appId}/envs/{env}/clusters/{clusterName}/namespaces/{namespaceName}/branches/{branchName}/releases")
   public ReleaseDTO createGrayRelease(@PathVariable String appId,
                                       @PathVariable String env, @PathVariable String clusterName,
@@ -110,7 +110,7 @@ public class ReleaseController {
     model.setNamespaceName(namespaceName);
 
     if (model.isEmergencyPublish() && !portalConfig.isEmergencyPublishAllowed(Env.valueOf(env))) {
-      throw new BadRequestException(String.format("Env: %s is not supported emergency publish now", env));
+      throw new BadRequestException("Env: %s is not supported emergency publish now", env);
     }
 
     ReleaseDTO createdRelease = releaseService.publish(model);
@@ -134,7 +134,11 @@ public class ReleaseController {
     ReleaseDTO release = releaseService.findReleaseById(Env.valueOf(env), releaseId);
 
     if (release == null) {
-      throw new NotFoundException("release not found");
+      throw NotFoundException.releaseNotFound(releaseId);
+    }
+    if (userPermissionValidator.shouldHideConfigToCurrentUser(release.getAppId(), env,
+        release.getClusterName(), release.getNamespaceName())) {
+      throw new AccessDeniedException("Access is denied");
     }
     return release;
   }
@@ -146,7 +150,7 @@ public class ReleaseController {
                                          @PathVariable String namespaceName,
                                          @Valid @PositiveOrZero(message = "page should be positive or 0") @RequestParam(defaultValue = "0") int page,
                                          @Valid @Positive(message = "size should be positive number") @RequestParam(defaultValue = "5") int size) {
-    if (permissionValidator.shouldHideConfigToCurrentUser(appId, env, namespaceName)) {
+    if (userPermissionValidator.shouldHideConfigToCurrentUser(appId, env, clusterName, namespaceName)) {
       return Collections.emptyList();
     }
 
@@ -161,7 +165,7 @@ public class ReleaseController {
                                              @Valid @PositiveOrZero(message = "page should be positive or 0") @RequestParam(defaultValue = "0") int page,
                                              @Valid @Positive(message = "size should be positive number") @RequestParam(defaultValue = "5") int size) {
 
-    if (permissionValidator.shouldHideConfigToCurrentUser(appId, env, namespaceName)) {
+    if (userPermissionValidator.shouldHideConfigToCurrentUser(appId, env, clusterName, namespaceName)) {
       return Collections.emptyList();
     }
 
@@ -184,10 +188,10 @@ public class ReleaseController {
     ReleaseDTO release = releaseService.findReleaseById(Env.valueOf(env), releaseId);
 
     if (release == null) {
-      throw new NotFoundException("release not found");
+      throw NotFoundException.releaseNotFound(releaseId);
     }
 
-    if (!permissionValidator.hasReleaseNamespacePermission(release.getAppId(), release.getNamespaceName(), env)) {
+    if (!userPermissionValidator.hasReleaseNamespacePermission(release.getAppId(), env, release.getClusterName(), release.getNamespaceName())) {
       throw new AccessDeniedException("Access is denied");
     }
 

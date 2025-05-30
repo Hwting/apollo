@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ public class ApolloEurekaClientConfig extends EurekaClientConfigBean {
   /**
    * Assert only one zone: defaultZone, but multiple environments.
    */
+  @Override
   public List<String> getEurekaServerServiceUrls(String myZone) {
     List<String> urls = bizConfig.eurekaServiceUrls();
     return CollectionUtils.isEmpty(urls) ? super.getEurekaServerServiceUrls(myZone) : urls;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.ctrip.framework.apollo.configservice.controller;
 
 import com.ctrip.framework.apollo.biz.entity.Release;
 import com.ctrip.framework.apollo.common.entity.AppNamespace;
+import com.ctrip.framework.apollo.common.utils.WebUtils;
 import com.ctrip.framework.apollo.configservice.service.AppNamespaceServiceWithCache;
 import com.ctrip.framework.apollo.configservice.service.config.ConfigService;
 import com.ctrip.framework.apollo.configservice.util.InstanceConfigAuditUtil;
@@ -26,7 +27,6 @@ import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.core.dto.ApolloConfig;
 import com.ctrip.framework.apollo.core.dto.ApolloNotificationMessages;
 import com.ctrip.framework.apollo.tracer.Tracer;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -53,8 +53,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/configs")
 public class ConfigController {
-  private static final Splitter X_FORWARDED_FOR_SPLITTER = Splitter.on(",").omitEmptyStrings()
-      .trimResults();
+
   private final ConfigService configService;
   private final AppNamespaceServiceWithCache appNamespaceService;
   private final NamespaceUtil namespaceUtil;
@@ -93,7 +92,7 @@ public class ConfigController {
     namespace = namespaceUtil.normalizeNamespace(appId, namespace);
 
     if (Strings.isNullOrEmpty(clientIp)) {
-      clientIp = tryToGetClientIp(request);
+      clientIp = WebUtils.tryToGetClientIp(request);
     }
 
     ApolloNotificationMessages clientMessages = transformMessages(messagesAsString);
@@ -220,14 +219,6 @@ public class ConfigController {
           release.getClusterName(),
           release.getNamespaceName(), release.getReleaseKey());
     }
-  }
-
-  private String tryToGetClientIp(HttpServletRequest request) {
-    String forwardedFor = request.getHeader("X-FORWARDED-FOR");
-    if (!Strings.isNullOrEmpty(forwardedFor)) {
-      return X_FORWARDED_FOR_SPLITTER.splitToList(forwardedFor).get(0);
-    }
-    return request.getRemoteAddr();
   }
 
   ApolloNotificationMessages transformMessages(String messagesAsString) {

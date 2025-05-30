@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ public class ConfigsImportController {
    *             etc.
    * @throws IOException
    */
-  @PreAuthorize(value = "@permissionValidator.hasModifyNamespacePermission(#appId, #namespaceName, #env)")
+  @PreAuthorize(value = "@userPermissionValidator.hasModifyNamespacePermission(#appId, #env, #clusterName, #namespaceName)")
   @PostMapping("/apps/{appId}/envs/{env}/clusters/{clusterName}/namespaces/{namespaceName}/items/import")
   public void importConfigFile(@PathVariable String appId, @PathVariable String env,
                                @PathVariable String clusterName, @PathVariable String namespaceName,
@@ -76,6 +76,7 @@ public class ConfigsImportController {
     configsImportService.forceImportNamespaceFromFile(Env.valueOf(env), standardFilename, file.getInputStream());
   }
 
+  @PreAuthorize(value = "@userPermissionValidator.isSuperAdmin()")
   @PostMapping(value = "/configs/import", params = "conflictAction=cover")
   public void importConfigByZipWithCoverConflictNamespace(@RequestParam(value = "envs") String envs,
                                 @RequestParam("file") MultipartFile file) throws IOException {
@@ -90,6 +91,7 @@ public class ConfigsImportController {
     }
   }
 
+  @PreAuthorize(value = "@userPermissionValidator.isSuperAdmin()")
   @PostMapping(value = "/configs/import", params = "conflictAction=ignore")
   public void importConfigByZipWithIgnoreConflictNamespace(@RequestParam(value = "envs") String envs,
                                 @RequestParam("file") MultipartFile file) throws IOException {

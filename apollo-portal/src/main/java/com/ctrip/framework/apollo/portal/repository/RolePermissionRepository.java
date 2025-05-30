@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,6 @@ public interface RolePermissionRepository extends PagingAndSortingRepository<Rol
   List<RolePermission> findByRoleIdIn(Collection<Long> roleId);
 
   @Modifying
-  @Query("UPDATE RolePermission SET IsDeleted=1, DataChange_LastModifiedBy = ?2 WHERE PermissionId in ?1")
+  @Query("UPDATE RolePermission SET IsDeleted = true, DeletedAt = ROUND(UNIX_TIMESTAMP(NOW(4))*1000), DataChange_LastModifiedBy = ?2 WHERE PermissionId in ?1 and IsDeleted = false")
   Integer batchDeleteByPermissionIds(List<Long> permissionIds, String operator);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
  */
 package com.ctrip.framework.apollo.biz.grayReleaseRule;
 
+import com.ctrip.framework.apollo.biz.utils.ReleaseMessageKeyGenerator;
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -43,7 +43,6 @@ import com.google.common.collect.TreeMultimap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.CollectionUtils;
 
 import java.util.List;
@@ -59,13 +58,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class GrayReleaseRulesHolder implements ReleaseMessageListener, InitializingBean {
   private static final Logger logger = LoggerFactory.getLogger(GrayReleaseRulesHolder.class);
   private static final Joiner STRING_JOINER = Joiner.on(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR);
-  private static final Splitter STRING_SPLITTER =
-      Splitter.on(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR).omitEmptyStrings();
 
-  @Autowired
-  private GrayReleaseRuleRepository grayReleaseRuleRepository;
-  @Autowired
-  private BizConfig bizConfig;
+  private final GrayReleaseRuleRepository grayReleaseRuleRepository;
+  private final BizConfig bizConfig;
 
   private int databaseScanInterval;
   private ScheduledExecutorService executorService;
@@ -73,14 +68,21 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
   private Multimap<String, GrayReleaseRuleCache> grayReleaseRuleCache;
   //store clientAppId+clientNamespace+ip -> ruleId map
   private Multimap<String, Long> reversedGrayReleaseRuleCache;
+  //store clientAppId+clientNamespace+label -> ruleId map
+  private Multimap<String, Long> reversedGrayReleaseRuleLabelCache;
   //an auto increment version to indicate the age of rules
   private AtomicLong loadVersion;
 
-  public GrayReleaseRulesHolder() {
+  public GrayReleaseRulesHolder(final GrayReleaseRuleRepository grayReleaseRuleRepository,
+      final BizConfig bizConfig) {
+    this.grayReleaseRuleRepository = grayReleaseRuleRepository;
+    this.bizConfig = bizConfig;
     loadVersion = new AtomicLong();
     grayReleaseRuleCache = Multimaps.synchronizedSetMultimap(
         TreeMultimap.create(String.CASE_INSENSITIVE_ORDER, Ordering.natural()));
     reversedGrayReleaseRuleCache = Multimaps.synchronizedSetMultimap(
+        TreeMultimap.create(String.CASE_INSENSITIVE_ORDER, Ordering.natural()));
+    reversedGrayReleaseRuleLabelCache = Multimaps.synchronizedSetMultimap(
         TreeMultimap.create(String.CASE_INSENSITIVE_ORDER, Ordering.natural()));
     executorService = Executors.newScheduledThreadPool(1, ApolloThreadFactory
         .create("GrayReleaseRulesHolder", true));
@@ -103,10 +105,9 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
     if (!Topics.APOLLO_RELEASE_TOPIC.equals(channel) || Strings.isNullOrEmpty(releaseMessage)) {
       return;
     }
-    List<String> keys = STRING_SPLITTER.splitToList(releaseMessage);
+    List<String> keys = ReleaseMessageKeyGenerator.messageToList(releaseMessage);
     //message should be appId+cluster+namespace
-    if (keys.size() != 3) {
-      logger.error("message format invalid - {}", releaseMessage);
+    if (CollectionUtils.isEmpty(keys)) {
       return;
     }
     String appId = keys.get(0);
@@ -155,15 +156,29 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
   }
 
   /**
-   * Check whether there are gray release rules for the clientAppId, clientIp, namespace
-   * combination. Please note that even there are gray release rules, it doesn't mean it will always
-   * load gray releases. Because gray release rules actually apply to one more dimension - cluster.
+   * Check whether there are gray release rules for the clientAppId, clientIp, clientLabel, namespace combination.
+   * Please note that even there are gray release rules, it doesn't mean it will always load gray
+   * releases. Because gray release rules actually apply to one more dimension - cluster.
    */
-  public boolean hasGrayReleaseRule(String clientAppId, String clientIp, String namespaceName) {
-    return reversedGrayReleaseRuleCache.containsKey(assembleReversedGrayReleaseRuleKey(clientAppId,
+  public boolean hasGrayReleaseRule(String clientAppId, String clientIp, String clientLabel,
+      String namespaceName) {
+    // check ip gray rule
+    if (reversedGrayReleaseRuleCache.containsKey(assembleReversedGrayReleaseRuleKey(clientAppId,
         namespaceName, clientIp)) || reversedGrayReleaseRuleCache.containsKey
         (assembleReversedGrayReleaseRuleKey(clientAppId, namespaceName, GrayReleaseRuleItemDTO
-            .ALL_IP));
+            .ALL_IP))) {
+      return true;
+    }
+    // check label gray rule
+    if (!Strings.isNullOrEmpty(clientLabel) &&
+        (reversedGrayReleaseRuleLabelCache.containsKey(
+            assembleReversedGrayReleaseRuleKey(clientAppId, namespaceName, clientLabel)) ||
+            reversedGrayReleaseRuleLabelCache.containsKey(
+                assembleReversedGrayReleaseRuleKey(clientAppId, namespaceName,
+                    GrayReleaseRuleItemDTO.ALL_Label)))) {
+      return true;
+    }
+    return false;
   }
 
   private void scanGrayReleaseRules() {
@@ -235,6 +250,10 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
           reversedGrayReleaseRuleCache.put(assembleReversedGrayReleaseRuleKey(ruleItemDTO
               .getClientAppId(), ruleCache.getNamespaceName(), clientIp), ruleCache.getRuleId());
         }
+        for (String label : ruleItemDTO.getClientLabelList()) {
+          reversedGrayReleaseRuleLabelCache.put(assembleReversedGrayReleaseRuleKey(ruleItemDTO
+              .getClientAppId(), ruleCache.getNamespaceName(), label), ruleCache.getRuleId());
+        }
       }
     }
     grayReleaseRuleCache.put(key, ruleCache);
@@ -246,6 +265,10 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
       for (String clientIp : ruleItemDTO.getClientIpList()) {
         reversedGrayReleaseRuleCache.remove(assembleReversedGrayReleaseRuleKey(ruleItemDTO
             .getClientAppId(), ruleCache.getNamespaceName(), clientIp), ruleCache.getRuleId());
+      }
+      for (String label : ruleItemDTO.getClientLabelList()) {
+        reversedGrayReleaseRuleLabelCache.remove(assembleReversedGrayReleaseRuleKey(ruleItemDTO
+            .getClientAppId(), ruleCache.getNamespaceName(), label), ruleCache.getRuleId());
       }
     }
   }
@@ -285,8 +308,8 @@ public class GrayReleaseRulesHolder implements ReleaseMessageListener, Initializ
   }
 
   private String assembleReversedGrayReleaseRuleKey(String clientAppId, String
-      clientNamespaceName, String clientIp) {
-    return STRING_JOINER.join(clientAppId, clientNamespaceName, clientIp);
+      clientNamespaceName, String clientIpOrLabel) {
+    return STRING_JOINER.join(clientAppId, clientNamespaceName, clientIpOrLabel);
   }
 
 }

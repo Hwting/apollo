@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -64,11 +63,7 @@ public class GrayReleaseRulesHolderTest {
 
   @Before
   public void setUp() throws Exception {
-    grayReleaseRulesHolder = spy(new GrayReleaseRulesHolder());
-    ReflectionTestUtils.setField(grayReleaseRulesHolder, "bizConfig",
-                                 bizConfig);
-    ReflectionTestUtils.setField(grayReleaseRulesHolder, "grayReleaseRuleRepository",
-        grayReleaseRuleRepository);
+    grayReleaseRulesHolder = spy(new GrayReleaseRulesHolder(grayReleaseRuleRepository, bizConfig));
     idCounter = new AtomicLong();
   }
 
@@ -114,19 +109,29 @@ public class GrayReleaseRulesHolderTest {
     assertNull(grayReleaseRulesHolder.findReleaseIdFromGrayReleaseRule(anotherClientAppId,
         anotherClientIp, anotherClientLabel, someAppId, someClusterName, someNamespaceName));
 
-    assertTrue(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp,
-        someNamespaceName));
-    assertTrue(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId.toUpperCase(), someClientIp,
-        someNamespaceName.toUpperCase()));
-    assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, anotherClientIp,
-        someNamespaceName));
-    assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp,
-        anotherNamespaceName));
+    assertTrue(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp, someClientLabel,
+            someNamespaceName));
+    assertTrue(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId.toUpperCase(), someClientIp,
+            someClientLabel, someNamespaceName.toUpperCase()));
+    assertTrue(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, anotherClientIp, someClientLabel,
+            someNamespaceName));
+    assertTrue(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId.toUpperCase(), anotherClientIp,
+            someClientLabel, someNamespaceName.toUpperCase()));
+    assertFalse(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, anotherClientIp,
+            anotherClientLabel, someNamespaceName));
+    assertFalse(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp, someClientLabel,
+            anotherNamespaceName));
 
     assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, anotherClientIp,
-        someNamespaceName));
+        anotherClientLabel, someNamespaceName));
     assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, anotherClientIp,
-        anotherNamespaceName));
+        anotherClientLabel, anotherNamespaceName));
 
     GrayReleaseRule anotherRule = assembleGrayReleaseRule(someAppId, someClusterName,
         someNamespaceName, Lists.newArrayList(assembleRuleItem(anotherClientAppId, Sets.newHashSet
@@ -148,18 +153,22 @@ public class GrayReleaseRulesHolderTest {
     assertEquals(someReleaseId, grayReleaseRulesHolder.findReleaseIdFromGrayReleaseRule
         (anotherClientAppId, anotherClientIp, anotherClientLabel, someAppId, someClusterName, someNamespaceName));
 
-
-    assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp,
-        someNamespaceName));
-    assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp,
-        anotherNamespaceName));
+    assertFalse(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp, someClientLabel, someNamespaceName));
+    assertFalse(
+        grayReleaseRulesHolder.hasGrayReleaseRule(someClientAppId, someClientIp, someClientLabel, anotherNamespaceName));
 
     assertTrue(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, anotherClientIp,
-        someNamespaceName));
-    assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, someClientIp,
-        someNamespaceName));
+        anotherClientLabel, someNamespaceName));
+    assertTrue(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, anotherClientIp,
+        someClientLabel, someNamespaceName));
+    assertTrue(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, someClientIp,
+        anotherClientLabel, someNamespaceName));
+    assertFalse(
+        grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, someClientIp, someClientLabel,
+            someNamespaceName));
     assertFalse(grayReleaseRulesHolder.hasGrayReleaseRule(anotherClientAppId, anotherClientIp,
-        anotherNamespaceName));
+        anotherClientLabel, anotherNamespaceName));
   }
 
   private GrayReleaseRule assembleGrayReleaseRule(String appId, String clusterName, String

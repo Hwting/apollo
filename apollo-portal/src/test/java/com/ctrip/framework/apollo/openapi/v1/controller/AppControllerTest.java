@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ public class AppControllerTest {
   @Test
   public void testFindAppsAuthorized() throws Exception {
     final long consumerId = 123456;
-    Mockito.when(this.consumerAuthUtil.retrieveConsumerId(Mockito.any())).thenReturn(consumerId);
+    Mockito.when(this.consumerAuthUtil.retrieveConsumerIdFromCtx()).thenReturn(consumerId);
 
     final List<ConsumerRole> consumerRoles = Arrays.asList(
         generateConsumerRoleByRoleId(6),

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@ import com.ctrip.framework.apollo.biz.entity.ReleaseMessage;
 import com.ctrip.framework.apollo.biz.grayReleaseRule.GrayReleaseRulesHolder;
 import com.ctrip.framework.apollo.biz.message.ReleaseMessageListener;
 import com.ctrip.framework.apollo.biz.message.Topics;
+import com.ctrip.framework.apollo.common.utils.WebUtils;
 import com.ctrip.framework.apollo.configservice.util.NamespaceUtil;
 import com.ctrip.framework.apollo.configservice.util.WatchKeysUtil;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.core.dto.ApolloConfig;
+import com.ctrip.framework.apollo.core.enums.ConfigFileFormat;
 import com.ctrip.framework.apollo.core.utils.PropertiesUtil;
 import com.ctrip.framework.apollo.tracer.Tracer;
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -65,12 +66,12 @@ import java.util.concurrent.TimeUnit;
 public class ConfigFileController implements ReleaseMessageListener {
   private static final Logger logger = LoggerFactory.getLogger(ConfigFileController.class);
   private static final Joiner STRING_JOINER = Joiner.on(ConfigConsts.CLUSTER_NAMESPACE_SEPARATOR);
-  private static final Splitter X_FORWARDED_FOR_SPLITTER = Splitter.on(",").omitEmptyStrings()
-      .trimResults();
   private static final long MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
   private static final long EXPIRE_AFTER_WRITE = 30;
-  private final HttpHeaders propertiesResponseHeaders;
+  private final HttpHeaders plainTextResponseHeaders;
   private final HttpHeaders jsonResponseHeaders;
+  private final HttpHeaders yamlResponseHeaders;
+  private final HttpHeaders xmlResponseHeaders;
   private final ResponseEntity<String> NOT_FOUND_RESPONSE;
   private Cache<String, String> localCache;
   private final Multimap<String, String>
@@ -108,10 +109,14 @@ public class ConfigFileController implements ReleaseMessageListener {
           logger.debug("removed cache key: {}", cacheKey);
         })
         .build();
-    propertiesResponseHeaders = new HttpHeaders();
-    propertiesResponseHeaders.add("Content-Type", "text/plain;charset=UTF-8");
+    plainTextResponseHeaders = new HttpHeaders();
+    plainTextResponseHeaders.add("Content-Type", "text/plain;charset=UTF-8");
     jsonResponseHeaders = new HttpHeaders();
     jsonResponseHeaders.add("Content-Type", "application/json;charset=UTF-8");
+    yamlResponseHeaders = new HttpHeaders();
+    yamlResponseHeaders.add("Content-Type", "application/yaml;charset=UTF-8");
+    xmlResponseHeaders = new HttpHeaders();
+    xmlResponseHeaders.add("Content-Type", "application/xml;charset=UTF-8");
     NOT_FOUND_RESPONSE = new ResponseEntity<>(HttpStatus.NOT_FOUND);
     this.configController = configController;
     this.namespaceUtil = namespaceUtil;
@@ -138,7 +143,7 @@ public class ConfigFileController implements ReleaseMessageListener {
       return NOT_FOUND_RESPONSE;
     }
 
-    return new ResponseEntity<>(result, propertiesResponseHeaders, HttpStatus.OK);
+    return new ResponseEntity<>(result, plainTextResponseHeaders, HttpStatus.OK);
   }
 
   @GetMapping(value = "/json/{appId}/{clusterName}/{namespace:.+}")
@@ -162,6 +167,44 @@ public class ConfigFileController implements ReleaseMessageListener {
     return new ResponseEntity<>(result, jsonResponseHeaders, HttpStatus.OK);
   }
 
+  @GetMapping(value = "/raw/{appId}/{clusterName}/{namespace:.+}")
+  public ResponseEntity<String> queryConfigAsRaw(@PathVariable String appId,
+                                                 @PathVariable String clusterName,
+                                                 @PathVariable String namespace,
+                                                 @RequestParam(value = "dataCenter", required = false) String dataCenter,
+                                                 @RequestParam(value = "ip", required = false) String clientIp,
+                                                 @RequestParam(value = "label", required = false) String clientLabel,
+                                                 HttpServletRequest request,
+                                                 HttpServletResponse response) throws IOException {
+
+    String result =
+        queryConfig(ConfigFileOutputFormat.RAW, appId, clusterName, namespace, dataCenter,
+            clientIp, clientLabel, request, response);
+
+    if (result == null) {
+      return NOT_FOUND_RESPONSE;
+    }
+
+    ConfigFileFormat format = determineNamespaceFormat(namespace);
+    HttpHeaders responseHeaders;
+    switch (format) {
+      case JSON:
+        responseHeaders = jsonResponseHeaders;
+        break;
+      case YML:
+      case YAML:
+        responseHeaders = yamlResponseHeaders;
+        break;
+      case XML:
+        responseHeaders = xmlResponseHeaders;
+        break;
+      default:
+        responseHeaders = plainTextResponseHeaders;
+        break;
+    }
+    return new ResponseEntity<>(result, responseHeaders, HttpStatus.OK);
+  }
+
   String queryConfig(ConfigFileOutputFormat outputFormat, String appId, String clusterName,
                      String namespace, String dataCenter, String clientIp, String clientLabel,
                      HttpServletRequest request,
@@ -172,12 +215,12 @@ public class ConfigFileController implements ReleaseMessageListener {
     namespace = namespaceUtil.normalizeNamespace(appId, namespace);
 
     if (Strings.isNullOrEmpty(clientIp)) {
-      clientIp = tryToGetClientIp(request);
+      clientIp = WebUtils.tryToGetClientIp(request);
     }
 
     //1. check whether this client has gray release rules
     boolean hasGrayReleaseRule = grayReleaseRulesHolder.hasGrayReleaseRule(appId, clientIp,
-        namespace);
+        clientLabel, namespace);
 
     String cacheKey = assembleCacheKey(outputFormat, appId, clusterName, namespace, dataCenter);
 
@@ -202,7 +245,7 @@ public class ConfigFileController implements ReleaseMessageListener {
       }
       //5. Double check if this client needs to load gray release, if yes, load from db again
       //This step is mainly to avoid cache pollution
-      if (grayReleaseRulesHolder.hasGrayReleaseRule(appId, clientIp, namespace)) {
+      if (grayReleaseRulesHolder.hasGrayReleaseRule(appId, clientIp, clientLabel, namespace)) {
         Tracer.logEvent("ConfigFile.Cache.GrayReleaseConflict", cacheKey);
         return loadConfig(outputFormat, appId, clusterName, namespace, dataCenter, clientIp, clientLabel,
             request, response);
@@ -249,9 +292,22 @@ public class ConfigFileController implements ReleaseMessageListener {
       case JSON:
         result = GSON.toJson(apolloConfig.getConfigurations());
         break;
+      case RAW:
+        result = getRawConfigContent(apolloConfig);
+        break;
     }
 
     return result;
+  }
+
+  private String getRawConfigContent(ApolloConfig apolloConfig) throws IOException {
+    ConfigFileFormat format = determineNamespaceFormat(apolloConfig.getNamespaceName());
+      if (format == ConfigFileFormat.Properties) {
+          Properties properties = new Properties();
+          properties.putAll(apolloConfig.getConfigurations());
+          return PropertiesUtil.toString(properties);
+      }
+    return apolloConfig.getConfigurations().get("content");
   }
 
   String assembleCacheKey(ConfigFileOutputFormat outputFormat, String appId, String clusterName,
@@ -263,6 +319,17 @@ public class ConfigFileController implements ReleaseMessageListener {
       keyParts.add(dataCenter);
     }
     return STRING_JOINER.join(keyParts);
+  }
+
+  ConfigFileFormat determineNamespaceFormat(String namespaceName) {
+    String lowerCase = namespaceName.toLowerCase();
+    for (ConfigFileFormat format : ConfigFileFormat.values()) {
+      if (lowerCase.endsWith("." + format.getValue())) {
+        return format;
+      }
+    }
+
+    return ConfigFileFormat.Properties;
   }
 
   @Override
@@ -288,7 +355,7 @@ public class ConfigFileController implements ReleaseMessageListener {
   }
 
   enum ConfigFileOutputFormat {
-    PROPERTIES("properties"), JSON("json");
+    PROPERTIES("properties"), JSON("json"), RAW("raw");
 
     private String value;
 
@@ -301,11 +368,4 @@ public class ConfigFileController implements ReleaseMessageListener {
     }
   }
 
-  private String tryToGetClientIp(HttpServletRequest request) {
-    String forwardedFor = request.getHeader("X-FORWARDED-FOR");
-    if (!Strings.isNullOrEmpty(forwardedFor)) {
-      return X_FORWARDED_FOR_SPLITTER.splitToList(forwardedFor).get(0);
-    }
-    return request.getRemoteAddr();
-  }
 }

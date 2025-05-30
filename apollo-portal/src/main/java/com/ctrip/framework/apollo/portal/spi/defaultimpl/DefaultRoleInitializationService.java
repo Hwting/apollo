@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import com.ctrip.framework.apollo.portal.service.RolePermissionService;
 import com.ctrip.framework.apollo.portal.service.SystemRoleManagerService;
 import com.ctrip.framework.apollo.portal.util.RoleUtils;
 import com.google.common.collect.Sets;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -45,14 +44,20 @@ import java.util.stream.Stream;
  */
 public class DefaultRoleInitializationService implements RoleInitializationService {
 
-  @Autowired
-  private RolePermissionService rolePermissionService;
-  @Autowired
-  private PortalConfig portalConfig;
-  @Autowired
-  private PermissionRepository permissionRepository;
+  private final RolePermissionService rolePermissionService;
+  private final PortalConfig portalConfig;
+  private final PermissionRepository permissionRepository;
+
+  public DefaultRoleInitializationService(final RolePermissionService rolePermissionService,
+      final PortalConfig portalConfig,
+      final PermissionRepository permissionRepository) {
+    this.rolePermissionService = rolePermissionService;
+    this.portalConfig = portalConfig;
+    this.permissionRepository = permissionRepository;
+  }
 
   @Transactional
+  @Override
   public void initAppRoles(App app) {
     String appId = app.getAppId();
 
@@ -79,14 +84,15 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
     //assign modify、release namespace role to user
     rolePermissionService.assignRoleToUsers(
         RoleUtils.buildNamespaceRoleName(appId, ConfigConsts.NAMESPACE_APPLICATION, RoleType.MODIFY_NAMESPACE),
-        Sets.newHashSet(operator), operator);
+        Sets.newHashSet(app.getOwnerName()), operator);
     rolePermissionService.assignRoleToUsers(
         RoleUtils.buildNamespaceRoleName(appId, ConfigConsts.NAMESPACE_APPLICATION, RoleType.RELEASE_NAMESPACE),
-        Sets.newHashSet(operator), operator);
+        Sets.newHashSet(app.getOwnerName()), operator);
 
   }
 
   @Transactional
+  @Override
   public void initNamespaceRoles(String appId, String namespaceName, String operator) {
 
     String modifyNamespaceRoleName = RoleUtils.buildModifyNamespaceRoleName(appId, namespaceName);
@@ -103,6 +109,7 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
   }
 
   @Transactional
+  @Override
   public void initNamespaceEnvRoles(String appId, String namespaceName, String operator) {
     List<Env> portalEnvs = portalConfig.portalSupportedEnvs();
 
@@ -112,6 +119,7 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
   }
 
   @Transactional
+  @Override
   public void initNamespaceSpecificEnvRoles(String appId, String namespaceName, String env, String operator) {
     String modifyNamespaceEnvRoleName = RoleUtils.buildModifyNamespaceRoleName(appId, namespaceName, env);
     if (rolePermissionService.findRoleByRoleName(modifyNamespaceEnvRoleName) == null) {
@@ -127,6 +135,7 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
   }
 
   @Transactional
+  @Override
   public void initCreateAppRole() {
     if (rolePermissionService.findRoleByRoleName(SystemRoleManagerService.CREATE_APPLICATION_ROLE_NAME) != null) {
       return;
@@ -143,7 +152,7 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
   }
 
   @Transactional
-  private void createManageAppMasterRole(String appId, String operator) {
+  public void createManageAppMasterRole(String appId, String operator) {
     Permission permission = createPermission(appId, PermissionType.MANAGE_APP_MASTER, operator);
     rolePermissionService.createPermission(permission);
     Role role = createRole(RoleUtils.buildAppRoleName(appId, PermissionType.MANAGE_APP_MASTER), operator);
@@ -154,6 +163,7 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
 
   // fix historical data
   @Transactional
+  @Override
   public void initManageAppMasterRole(String appId, String operator) {
     String manageAppMasterRoleName = RoleUtils.buildAppRoleName(appId, PermissionType.MANAGE_APP_MASTER);
     if (rolePermissionService.findRoleByRoleName(manageAppMasterRoleName) != null) {
@@ -161,6 +171,20 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
     }
     synchronized (DefaultRoleInitializationService.class) {
       createManageAppMasterRole(appId, operator);
+    }
+  }
+
+  @Transactional
+  @Override
+  public void initClusterNamespaceRoles(String appId, String env, String clusterName, String operator) {
+    String modifyNamespacesInClusterRoleName = RoleUtils.buildModifyNamespacesInClusterRoleName(appId, env, clusterName);
+    if (rolePermissionService.findRoleByRoleName(modifyNamespacesInClusterRoleName) == null) {
+      createClusterRole(appId, env, clusterName, PermissionType.MODIFY_NAMESPACES_IN_CLUSTER, modifyNamespacesInClusterRoleName, operator);
+    }
+
+    String releaseNamespacesInClusterRoleName = RoleUtils.buildReleaseNamespacesInClusterRoleName(appId, env, clusterName);
+    if (rolePermissionService.findRoleByRoleName(releaseNamespacesInClusterRoleName) == null) {
+      createClusterRole(appId, env, clusterName, PermissionType.RELEASE_NAMESPACES_IN_CLUSTER, releaseNamespacesInClusterRoleName, operator);
     }
   }
 
@@ -212,6 +236,17 @@ public class DefaultRoleInitializationService implements RoleInitializationServi
                                       String roleName, String operator) {
     Permission permission =
         createPermission(RoleUtils.buildNamespaceTargetId(appId, namespaceName, env), permissionType, operator);
+    Permission createdPermission = rolePermissionService.createPermission(permission);
+
+    Role role = createRole(roleName, operator);
+    rolePermissionService
+        .createRoleWithPermissions(role, Sets.newHashSet(createdPermission.getId()));
+  }
+
+  private void createClusterRole(String appId, String env, String clusterName, String permissionType,
+                                 String roleName, String operator) {
+    Permission permission =
+        createPermission(RoleUtils.buildClusterTargetId(appId, env, clusterName), permissionType, operator);
     Permission createdPermission = rolePermissionService.createPermission(permission);
 
     Role role = createRole(roleName, operator);

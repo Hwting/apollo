@@ -20,18 +20,20 @@
 1.6.0版本增加了自定义环境的功能，可以在不修改代码的情况增加环境
 
 1. protaldb增加环境，参考[3.1 调整ApolloPortalDB配置](zh/deployment/distributed-deployment-guide?id=_31-调整apolloportaldb配置)
-2. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/usage/java-sdk-user-guide?id=_122-apollo-meta-server)。
+2. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/client/java-sdk-user-guide?id=_122-apollo-meta-server)。
 
 >注1：一套Portal可以管理多个环境，但是每个环境都需要独立部署一套Config Service、Admin Service和ApolloConfigDB，具体请参考：[2.1.2 创建ApolloConfigDB](zh/deployment/distributed-deployment-guide?id=_212-创建apolloconfigdb)，[3.2 调整ApolloConfigDB配置](zh/deployment/distributed-deployment-guide?id=_32-调整apolloconfigdb配置)，[2.2.1.1.2 配置数据库连接信息](zh/deployment/distributed-deployment-guide?id=_22112-配置数据库连接信息)
 
 > 注2：如果是为已经运行了一段时间的Apollo配置中心增加环境，别忘了参考[2.1.2.4 从别的环境导入ApolloConfigDB的项目数据](zh/deployment/distributed-deployment-guide?id=_2124-从别的环境导入apolloconfigdb的项目数据)对新的环境做初始化
+
+> 注3：如果自定义的环境名称为 PROD，会被强制转换为 PRO。FWS 会被强制转换为 FAT。
 
 #### 4.2 1.5.1及之前的版本
 ##### 4.2.1 添加Apollo预先定义好的环境
 
 如果需要添加的环境是Apollo预先定义的环境（DEV, FAT, UAT, PRO），需要两步操作：
 1. protaldb增加环境，参考[3.1 调整ApolloPortalDB配置](zh/deployment/distributed-deployment-guide?id=_31-调整apolloportaldb配置)
-2. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/usage/java-sdk-user-guide?id=_122-apollo-meta-server)。
+2. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/client/java-sdk-user-guide?id=_122-apollo-meta-server)。
 
 >注1：一套Portal可以管理多个环境，但是每个环境都需要独立部署一套Config Service、Admin Service和ApolloConfigDB，具体请参考：[2.1.2 创建ApolloConfigDB](zh/deployment/distributed-deployment-guide?id=_212-创建apolloconfigdb)，[3.2 调整ApolloConfigDB配置](zh/deployment/distributed-deployment-guide?id=_32-调整apolloconfigdb配置)，[2.2.1.1.2 配置数据库连接信息](zh/deployment/distributed-deployment-guide?id=_22112-配置数据库连接信息)
 
@@ -87,7 +89,7 @@ public class LegacyMetaServerProvider {
 }
 ```
 6. protaldb增加`BETA`环境，参考[3.1 调整ApolloPortalDB配置](zh/deployment/distributed-deployment-guide?id=_31-调整apolloportaldb配置)
-7. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/usage/java-sdk-user-guide?id=_122-apollo-meta-server)。
+7. 为apollo-portal添加新增环境对应的meta server地址，具体参考：[2.2.1.1.2.4 配置apollo-portal的meta service信息](zh/deployment/distributed-deployment-guide?id=_221124-配置apollo-portal的meta-service信息)。apollo-client在新的环境下使用时也需要做好相应的配置，具体参考：[1.2.2 Apollo Meta Server](zh/client/java-sdk-user-guide?id=_122-apollo-meta-server)。
 
 >注1：一套Portal可以管理多个环境，但是每个环境都需要独立部署一套Config Service、Admin Service和ApolloConfigDB，具体请参考：[2.1.2 创建ApolloConfigDB](zh/deployment/distributed-deployment-guide?id=_212-创建apolloconfigdb)，[3.2 调整ApolloConfigDB配置](zh/deployment/distributed-deployment-guide?id=_32-调整apolloconfigdb配置)，[2.2.1.1.2 配置数据库连接信息](zh/deployment/distributed-deployment-guide?id=_22112-配置数据库连接信息)
 
@@ -177,7 +179,7 @@ http://1.1.1.1:8761/eureka/,http://2.2.2.2:8761/eureka/
 
 ### 9. Spring Boot中使用`ConditionalOnProperty`读取不到配置
 
-`@ConditionalOnProperty`功能从0.10.0版本开始支持，具体可以参考 [Spring Boot集成方式](zh/usage/java-sdk-user-guide?id=_3213-spring-boot集成方式（推荐）)
+`@ConditionalOnProperty`功能从0.10.0版本开始支持，具体可以参考 [Spring Boot集成方式](zh/client/java-sdk-user-guide?id=_3213-spring-boot集成方式（推荐）)
 
 ### 10. 多机房如何实现A机房的客户端就近读取A机房的config service，B机房的客户端就近读取B机房的config service？
 
@@ -251,4 +253,52 @@ location /apollo/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_pass http://127.0.0.1:8070/;
 }
+```
+
+### 17. Portal挂载到nginx/slb后如何配置https？
+
+1. 在nginx/slb上配置https访问配置，以nginx为例：
+
+```
+    server {
+        listen 80 default_server;
+
+        location / {
+            # 把 80 端口的请求全部都重定向到 https
+            return 301 https://$http_host$request_uri;
+        }
+    }
+
+    server {
+        # nginx 版本较低不支持 http2 的, 则配置 listen 443 ssl;
+        listen 443 ssl http2;
+        server_name  your-domain-name;
+        # ssl 证书, nginx 需要使用完整证书链的证书
+        ssl_certificate /etc/nginx/ssl/xxx.crt;
+        ssl_certificate_key /etc/nginx/ssl/xxx.key;
+
+        location / {
+            proxy_pass http://apollo-portal-address:8070;
+            proxy_set_header x-real-ip $remote_addr;
+            proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+            # ！！！这里必须是 $http_host, 如果配置成 $host 会导致跳转的时候端口错误
+            proxy_set_header host $http_host;
+            proxy_set_header x-forwarded-proto $scheme;
+            proxy_http_version 1.1;
+        }
+    }
+```
+
+2. 配置apollo-portal解析反向代理的header信息
+
+修改apollo-portal安装包中config目录下的application-github.properties，增加以下配置：
+
+```properties
+server.forward-headers-strategy=framework
+```
+
+也可以通过环境变量配置：
+
+```
+SERVER_FORWARD_HEADERS_STRATEGY=framework
 ```

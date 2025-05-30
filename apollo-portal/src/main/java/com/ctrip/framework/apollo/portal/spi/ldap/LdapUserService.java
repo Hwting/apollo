@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import static org.springframework.ldap.query.LdapQueryBuilder.query;
 
 import com.ctrip.framework.apollo.portal.entity.bo.UserInfo;
 import com.ctrip.framework.apollo.portal.spi.UserService;
-import com.ctrip.framework.apollo.portal.spi.configuration.LdapExtendProperties;
-import com.ctrip.framework.apollo.portal.spi.configuration.LdapProperties;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -35,7 +33,6 @@ import java.util.TreeSet;
 import javax.naming.directory.Attribute;
 import javax.naming.ldap.LdapName;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.ldap.core.AttributesMapper;
@@ -59,11 +56,7 @@ import org.springframework.util.CollectionUtils;
  */
 public class LdapUserService implements UserService {
 
-  @Autowired
-  private LdapProperties ldapProperties;
-
-  @Autowired
-  private LdapExtendProperties ldapExtendProperties;
+  private final LdapTemplate ldapTemplate;
 
   /**
    * ldap search base
@@ -125,12 +118,12 @@ public class LdapUserService implements UserService {
   @Value("${ldap.group.groupMembership:}")
   private String groupMembershipAttrName;
 
-
-  @Autowired
-  private LdapTemplate ldapTemplate;
-
   private static final String MEMBER_OF_ATTR_NAME = "memberOf";
   private static final String MEMBER_UID_ATTR_NAME = "memberUid";
+
+  public LdapUserService(final LdapTemplate ldapTemplate) {
+    this.ldapTemplate = ldapTemplate;
+  }
 
   /**
    * 用户信息Mapper
@@ -269,7 +262,7 @@ public class LdapUserService implements UserService {
   }
 
   @Override
-  public List<UserInfo> searchUsers(String keyword, int offset, int limit) {
+  public List<UserInfo> searchUsers(String keyword, int offset, int limit, boolean includeInactiveUsers) {
     List<UserInfo> users = new ArrayList<>();
     if (StringUtils.isNotBlank(groupSearch)) {
       List<UserInfo> userListByGroup = searchUserInfoByGroup(groupBase, groupSearch, keyword,

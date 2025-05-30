@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 package com.ctrip.framework.apollo.configservice.service.config;
 
+import com.ctrip.framework.apollo.biz.grayReleaseRule.GrayReleaseRulesHolder;
+import com.ctrip.framework.apollo.biz.config.BizConfig;
 import com.ctrip.framework.apollo.core.dto.ApolloNotificationMessages;
 import com.google.common.collect.Lists;
 
@@ -26,12 +28,12 @@ import com.ctrip.framework.apollo.biz.service.ReleaseMessageService;
 import com.ctrip.framework.apollo.biz.service.ReleaseService;
 import com.ctrip.framework.apollo.biz.utils.ReleaseMessageKeyGenerator;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -55,6 +57,12 @@ public class ConfigServiceWithCacheTest {
   private Release someRelease;
   @Mock
   private ReleaseMessage someReleaseMessage;
+  @Mock
+  private BizConfig bizConfig;
+  @Mock
+  private MeterRegistry meterRegistry;
+  @Mock
+  private GrayReleaseRulesHolder grayReleaseRulesHolder;
 
   private String someAppId;
   private String someClusterName;
@@ -65,9 +73,8 @@ public class ConfigServiceWithCacheTest {
 
   @Before
   public void setUp() throws Exception {
-    configServiceWithCache = new ConfigServiceWithCache();
-    ReflectionTestUtils.setField(configServiceWithCache, "releaseService", releaseService);
-    ReflectionTestUtils.setField(configServiceWithCache, "releaseMessageService", releaseMessageService);
+    configServiceWithCache = new ConfigServiceWithCache(releaseService, releaseMessageService,
+        grayReleaseRulesHolder, bizConfig, meterRegistry);
 
     configServiceWithCache.initialize();
 

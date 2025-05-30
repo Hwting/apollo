@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ config_export_module.controller('ConfigExportController',
                                          }
 
                                          var selectedEnvStr = selectedEnvs.join(",");
-                                         $window.location.href = '/configs/export?envs=' + selectedEnvStr;
+                                         $window.location.href = AppUtil.prefixPath() + '/configs/export?envs=' + selectedEnvStr;
 
                                          toastr.success($translate.instant('ConfigExport.ExportSuccess'));
                                      };
@@ -93,7 +93,7 @@ config_export_module.controller('ConfigExportController',
                                          form.append('file', file);
                                          $http({
                                                    method: 'POST',
-                                                   url: '/configs/import?envs=' + selectedEnvStr + "&conflictAction="
+                                                   url: AppUtil.prefixPath() + '/configs/import?envs=' + selectedEnvStr + "&conflictAction="
                                                         + $scope.conflictAction,
                                                    data: form,
                                                    headers: {'Content-Type': undefined},

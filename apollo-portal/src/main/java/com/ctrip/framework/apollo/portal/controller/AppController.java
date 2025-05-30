@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package com.ctrip.framework.apollo.portal.controller;
 
 
+import com.ctrip.framework.apollo.audit.annotation.ApolloAuditLog;
+import com.ctrip.framework.apollo.audit.annotation.OpType;
 import com.ctrip.framework.apollo.common.dto.AppDTO;
 import com.ctrip.framework.apollo.common.entity.App;
 import com.ctrip.framework.apollo.common.exception.BadRequestException;
@@ -30,7 +32,6 @@ import com.ctrip.framework.apollo.portal.entity.model.AppModel;
 import com.ctrip.framework.apollo.portal.entity.po.Role;
 import com.ctrip.framework.apollo.portal.entity.vo.EnvClusterInfo;
 import com.ctrip.framework.apollo.portal.environment.Env;
-import com.ctrip.framework.apollo.portal.listener.AppCreationEvent;
 import com.ctrip.framework.apollo.portal.listener.AppDeletionEvent;
 import com.ctrip.framework.apollo.portal.listener.AppInfoChangedEvent;
 import com.ctrip.framework.apollo.portal.service.AdditionalUserInfoEnrichService;
@@ -46,7 +47,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -119,28 +119,18 @@ public class AppController {
     return appService.findByAppIds(appIds, page);
   }
 
-  @PreAuthorize(value = "@permissionValidator.hasCreateApplicationPermission()")
+  @PreAuthorize(value = "@userPermissionValidator.hasCreateApplicationPermission()")
   @PostMapping
+  @ApolloAuditLog(type = OpType.CREATE, name = "App.create")
   public App create(@Valid @RequestBody AppModel appModel) {
 
     App app = transformToApp(appModel);
-
-    App createdApp = appService.createAppInLocal(app);
-
-    publisher.publishEvent(new AppCreationEvent(createdApp));
-
-    Set<String> admins = appModel.getAdmins();
-    if (!CollectionUtils.isEmpty(admins)) {
-      rolePermissionService
-          .assignRoleToUsers(RoleUtils.buildAppMasterRoleName(createdApp.getAppId()),
-              admins, userInfoHolder.getUser().getUserId());
-    }
-
-    return createdApp;
+    return appService.createAppAndAddRolePermission(app, appModel.getAdmins());
   }
 
-  @PreAuthorize(value = "@permissionValidator.isAppAdmin(#appId)")
+  @PreAuthorize(value = "@userPermissionValidator.isAppAdmin(#appId)")
   @PutMapping("/{appId:.+}")
+  @ApolloAuditLog(type = OpType.UPDATE, name = "App.update")
   public void update(@PathVariable String appId, @Valid @RequestBody AppModel appModel) {
     if (!Objects.equals(appId, appModel.getAppId())) {
       throw new BadRequestException("The App Id of path variable and request body is different");
@@ -171,6 +161,7 @@ public class AppController {
   }
 
   @PostMapping(value = "/envs/{env}", consumes = {"application/json"})
+  @ApolloAuditLog(type = OpType.CREATE, name = "App.create.forEnv")
   public ResponseEntity<Void> create(@PathVariable String env, @Valid @RequestBody App app) {
     appService.createAppInRemote(Env.valueOf(env), app);
 
@@ -190,8 +181,9 @@ public class AppController {
   }
 
 
-  @PreAuthorize(value = "@permissionValidator.isSuperAdmin()")
+  @PreAuthorize(value = "@userPermissionValidator.isSuperAdmin()")
   @DeleteMapping("/{appId:.+}")
+  @ApolloAuditLog(type = OpType.RPC, name = "App.delete")
   public void deleteApp(@PathVariable String appId) {
     App app = appService.deleteAppInLocal(appId);
 

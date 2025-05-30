@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RunWith(SpringJUnit4ClassRunner.class)
 @Rollback
 @Transactional
-@SpringBootTest(classes = BizTestConfiguration.class, webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    classes = BizTestConfiguration.class,
+    webEnvironment = WebEnvironment.RANDOM_PORT
+)
 public abstract class AbstractIntegrationTest {
+
+  protected static final String APP_ID = "kl-app";
+  protected static final String CLUSTER_NAME = "default";
+  protected static final String NAMESPACE_NAME = "application";
+  protected static final String BRANCH_NAME = "default";
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Apollo Authors
+ * Copyright 2024 Apollo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.ctrip.framework.apollo.portal.service;
 import com.ctrip.framework.apollo.common.dto.ItemChangeSets;
 import com.ctrip.framework.apollo.common.dto.ItemDTO;
 import com.ctrip.framework.apollo.common.dto.NamespaceDTO;
+import com.ctrip.framework.apollo.common.exception.BadRequestException;
 import com.ctrip.framework.apollo.core.ConfigConsts;
 import com.ctrip.framework.apollo.core.enums.ConfigFileFormat;
 import com.ctrip.framework.apollo.portal.environment.Env;
@@ -32,7 +33,6 @@ import com.ctrip.framework.apollo.portal.entity.vo.ItemDiffs;
 import com.ctrip.framework.apollo.portal.entity.vo.NamespaceIdentifier;
 
 import java.util.Collections;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -74,13 +74,8 @@ public class ConfigServiceTest extends AbstractUnitTest {
     String namespaceName = "application";
     long someNamespaceId = 123L;
 
-    NamespaceTextModel model = new NamespaceTextModel();
-    model.setEnv("DEV");
-    model.setNamespaceName(namespaceName);
-    model.setClusterName(clusterName);
-    model.setAppId(appId);
-    model.setConfigText("a=b\nb=c\nc=d\nd=e");
-    model.setFormat(ConfigFileFormat.Properties.getValue());
+    NamespaceTextModel model = mockNamespaceModel(appId, clusterName, namespaceName,
+        someNamespaceId);
     List<ItemDTO> itemDTOs = mockBaseItemHas3Key();
     ItemChangeSets changeSets = new ItemChangeSets();
     changeSets.addCreateItem(new ItemDTO("d", "c", "", 4));
@@ -96,13 +91,49 @@ public class ConfigServiceTest extends AbstractUnitTest {
     userInfo.setUserId("test");
     when(userInfoHolder.getUser()).thenReturn(userInfo);
 
-    try {
-      configService.updateConfigItemByText(model);
-    } catch (Exception e) {
-      Assert.fail();
-    }
+    configService.updateConfigItemByText(model);
   }
 
+  private NamespaceTextModel mockNamespaceModel(String appId, String clusterName,
+      String namespaceName, long someNamespaceId) {
+    NamespaceTextModel model = new NamespaceTextModel();
+    model.setEnv("DEV");
+    model.setNamespaceName(namespaceName);
+    model.setClusterName(clusterName);
+    model.setAppId(appId);
+    model.setConfigText("a=b\nb=c\nc=d\nd=e");
+    model.setFormat(ConfigFileFormat.Properties.getValue());
+    model.setNamespaceId(someNamespaceId);
+    return model;
+  }
+
+  @Test(expected = BadRequestException.class)
+  public void testUpdateConfigByTextWithInvalidNamespaceId() {
+    String appId = "6666";
+    String clusterName = "default";
+    String namespaceName = "application";
+    long someNamespaceId = 123L;
+    long anotherNamespaceId = 321L;
+
+    NamespaceTextModel model = mockNamespaceModel(appId, clusterName, namespaceName,
+        anotherNamespaceId);
+    List<ItemDTO> itemDTOs = mockBaseItemHas3Key();
+    ItemChangeSets changeSets = new ItemChangeSets();
+    changeSets.addCreateItem(new ItemDTO("d", "c", "", 4));
+
+    NamespaceDTO someNamespaceDto = mock(NamespaceDTO.class);
+    when(someNamespaceDto.getId()).thenReturn(someNamespaceId);
+    when(namespaceAPI.loadNamespace(appId, model.getEnv(), clusterName, namespaceName))
+        .thenReturn(someNamespaceDto);
+    when(itemAPI.findItems(appId, Env.DEV, clusterName, namespaceName)).thenReturn(itemDTOs);
+    when(resolver.resolve(someNamespaceId, model.getConfigText(), itemDTOs)).thenReturn(changeSets);
+
+    UserInfo userInfo = new UserInfo();
+    userInfo.setUserId("test");
+    when(userInfoHolder.getUser()).thenReturn(userInfo);
+
+    configService.updateConfigItemByText(model);
+  }
 
   /**
    * a=b b=c c=d
